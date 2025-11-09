@@ -37,6 +37,12 @@ canvas {
   height: 100%;
 }
 
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 main {
   display: grid;
   grid-template-columns: 8% 80% 12%;
@@ -52,7 +58,8 @@ main {
 }
 
 #tools,
-#layersSection {
+#layersSection,
+#toolsmenu {
   padding: 10px;
   margin: 20px;
   border-radius: 5px;
@@ -63,7 +70,7 @@ main {
   background-color: rgb(51, 49, 50);
 }
 
-#tools > div {
+:is(#tools, #toolsmenu) > div {
   width: 30px;
   height: 30px;
   border: 1px solid #666;
@@ -98,18 +105,51 @@ main {
 }
 
 #layers {
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: auto;
   gap: 5px;
+  pointer-events: auto;
 }
 
 .layer {
+  position: relative;
+  display: flex;
   width: 100%;
+  aspect-ratio: 16/9;
   background-color: white;
+  align-items: end;
+  justify-content: end;
+}
+
+.layer span {
+  padding: 3px;
+  border-radius: 5px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: x-small;
+  background-color: #8877851e;
+  text-wrap: nowrap;
 }
 
 .selected {
   background-color: rgba(15, 15, 15, 0.749);
-  /* box-shadow: 0 0 2px black; */
+  box-shadow: 0 0 5px black;
+  border-color: maroon !important;
+}
+
+#toolsmenu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50px;
+  z-index: 1;
+  margin: 0;
+  border: 1px solid;
+  visibility: hidden;
+}
+
+.dragging {
+  border: 2px solid red;
+  background-color: antiquewhite;
 }

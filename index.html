@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <script type="module" src="main.js"></script>
+    <script type="module" src="app/index.js"></script>
     <link rel="icon" type="image/x-icon" href="images/icons/quanvas.png">
     <link rel="manifest" href="manifest.json">
     <title>Quanvas</title>
@@ -14,10 +14,10 @@
 <body>
     <header>
         <div id="special">
-            <div id="fillRule">
-                <img src="./images/tools/nonzero.svg" alt="fill rule">
+            <div id="fillrule">
+                <img src="./images/tools/fillrule.svg" alt="fill rule">
             </div>
-            <div id="nomove">
+            <div id="disablemove">
                 <img src="./images/tools/nomove.svg" alt="no move">
             </div>
             <div id="clip">
@@ -27,39 +27,37 @@
     </header>
     <main>
         <div id="tools">
-            <div id="pen" title="ctrl v" class="selected">
-                <img src="./images/tools/pen.svg" alt="pen">
+            <div id="penTools" title="ctrl v" class="selected">
+                <img src="./images/tools/pen.svg" id="pen" alt="pen">
             </div>
-            <div id="rect">
-                <img src="./images/tools/rectangle.svg" alt="rectangle">
+            <div id="rectangleTools">
+                <img src="./images/tools/rectangle.svg" id="rectangle" alt="rectangle">
             </div>
-            <div id="circle">
-                <img src="./images/tools/circle.svg" alt="circle">
+            <div id="circleTools">
+                <img src="./images/tools/circle.svg" id="circle" alt="circle">
             </div>
-            <div id="line">
-                <img src="./images/tools/line.svg" alt="line">
+            <div id="lineTools">
+                <img src="./images/tools/line.svg" id="line" alt="line">
             </div>
-            <div id="curve">
-                <img src="./images/tools/bezier.svg" alt="curve">
+            <div id="curveTools">
+                <img src="./images/tools/bezier.svg" id="bezier" alt="bezier curve">
             </div>
+            <aside id="toolsmenu">
+
+            </aside>
         </div>
         <div id="root">
-            <canvas></canvas>
         </div>
-        <div id="layersSection" resize="true">
+        <div id="layersSection" draggable="true">
             <div id="layers">
-                <div class="layer">
-                    <canvas></canvas>
-                </div>
-                <div class="layer">
-                    <canvas></canvas>
-                </div>
+
             </div>
-            <div id="addLayer">
+            <div id="addlayer">
                 <img src="./images/tools/add-layer.svg" alt="Add layer button">
             </div>
         </div>
     </main>
+
 </body>
 
 </html>
