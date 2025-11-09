@@ -1,0 +1,29 @@
+{
+  "name": "quanvas",
+  "version": "1.0.0",
+  "description": "Drawing app",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "pack": "webpack",
+    "watch": "webpack --watch",
+    "build": "webpack --mode production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GoldenThrust/Quanvas.git"
+  },
+  "keywords": [
+    "drawing"
+  ],
+  "author": "Adeniji Olajide",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GoldenThrust/Quanvas/issues"
+  },
+  "homepage": "https://github.com/GoldenThrust/Quanvas#readme",
+  "devDependencies": {
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1"
+  }
+}

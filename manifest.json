@@ -1,0 +1,16 @@
+{
+  "name": "Quanvas",
+  "short_name": "Qs",
+  "description": "Canvas drawing application",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2a148b",
+  "theme_color": "#520748",
+  "icons": [
+    {
+      "src": "./images/icons/quanvas.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}

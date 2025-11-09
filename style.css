@@ -1,0 +1,115 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 2px;
+  background-color: grey;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #250b217d;
+  box-shadow: 0 0 5px red;
+  border-radius: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: rgb(21, 8, 34);
+}
+
+header {
+  height: 8%;
+  border-width: 0 0 1px 0;
+  border-style: solid;
+  margin: 5px;
+  background-color: rgb(32, 32, 32);
+  border-radius: 5px;
+}
+
+img,
+canvas {
+  width: 100%;
+  height: 100%;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 8% 80% 12%;
+  height: 92%;
+}
+
+#root {
+  position: relative;
+  border: 2px solid grey;
+  box-shadow: 0 0 10px black;
+  background-color: white;
+  margin: 10px 0px 10px;
+}
+
+#tools,
+#layersSection {
+  padding: 10px;
+  margin: 20px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background-color: rgb(51, 49, 50);
+}
+
+#tools > div {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #666;
+  border-radius: 5px;
+  padding: 2px;
+}
+
+#special {
+  display: flex;
+  flex-direction: row;
+  justify-content: right;
+  align-items: center;
+  height: 100%;
+  gap: 10px;
+  padding: 10px;
+}
+
+#special > div {
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  border: 1px solid #666;
+  border-radius: 3px;
+}
+
+#layersSection {
+  display: flex;
+  justify-content: end;
+  align-items: center;
+  overflow-x: hidden;
+  height: 95%;
+}
+
+#layers {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  gap: 5px;
+}
+
+.layer {
+  width: 100%;
+  background-color: white;
+}
+
+.selected {
+  background-color: rgba(15, 15, 15, 0.749);
+  /* box-shadow: 0 0 2px black; */
+}

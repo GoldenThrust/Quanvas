@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="main.js"></script>
+    <link rel="icon" type="image/x-icon" href="images/icons/quanvas.png">
+    <link rel="manifest" href="manifest.json">
+    <title>Quanvas</title>
+</head>
+
+<body>
+    <header>
+        <div id="special">
+            <div id="fillRule">
+                <img src="./images/tools/nonzero.svg" alt="fill rule">
+            </div>
+            <div id="nomove">
+                <img src="./images/tools/nomove.svg" alt="no move">
+            </div>
+            <div id="clip">
+                <img src="./images/tools/clipboard.svg" alt="clip">
+            </div>
+        </div>
+    </header>
+    <main>
+        <div id="tools">
+            <div id="pen" title="ctrl v" class="selected">
+                <img src="./images/tools/pen.svg" alt="pen">
+            </div>
+            <div id="rect">
+                <img src="./images/tools/rectangle.svg" alt="rectangle">
+            </div>
+            <div id="circle">
+                <img src="./images/tools/circle.svg" alt="circle">
+            </div>
+            <div id="line">
+                <img src="./images/tools/line.svg" alt="line">
+            </div>
+            <div id="curve">
+                <img src="./images/tools/bezier.svg" alt="curve">
+            </div>
+        </div>
+        <div id="root">
+            <canvas></canvas>
+        </div>
+        <div id="layersSection" resize="true">
+            <div id="layers">
+                <div class="layer">
+                    <canvas></canvas>
+                </div>
+                <div class="layer">
+                    <canvas></canvas>
+                </div>
+            </div>
+            <div id="addLayer">
+                <img src="./images/tools/add-layer.svg" alt="Add layer button">
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
