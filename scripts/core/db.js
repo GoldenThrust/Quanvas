@@ -79,6 +79,21 @@ export default class Database {
         })
     }
 
+    async getByIndex(storeName, indexName, indexValue) {
+        return new Promise((resolve, reject) => {
+            const tx = this.db.transaction(storeName, "readonly");
+            const index = tx.objectStore(storeName).index(indexName);
+            const request = index.get(indexValue);
+            request.addEventListener("success", e => {
+                resolve(e.target.result);
+            })
+
+            request.addEventListener("error", e => {
+                reject(e.target.error);
+            })
+        })
+    }
+
     async delete(storeName, key) {
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(storeName, "readwrite");

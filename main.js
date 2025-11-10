@@ -9,14 +9,11 @@
 // }
 
 import Canvas from "./scripts/core/canvas.js";
-import { canvas } from "./scripts/shared/main.js";
+import { canvas, tools } from "./scripts/shared/main.js";
 import { v4 as uuid } from 'uuid';
+import settings from "./scripts/shared/settings.js";
 const rootElem = document.getElementById('root');
 const layersElem = document.getElementById('layers');
-
-addLayer();
-addLayer();
-addLayer();
 
 
 // Prevent right-click context menu
@@ -24,11 +21,7 @@ window.addEventListener("contextmenu", function (e) {
     e.preventDefault();
 }, false);
 
-const settings = {
-    fillrule: 'evenodd',
-    disablemove: false,
-    clip: false,
-}
+
 
 const toolsId = [
     'pen', 'pen2',
@@ -51,36 +44,16 @@ const toolsMenu = {
 }
 
 
-const tools = document.getElementById("tools");
+const toolsElem = document.getElementById("tools");
 const toolsMenuElem = document.getElementById('toolsmenu');
 const specialMenuElem = document.getElementById('special');
-let selectedElement = tools.querySelector('#penTools');
 
-tools.addEventListener("click", (e) => {
-    if (e.target.parentElement.id && toolsId.includes(e.target.id)) {
-        selectTool(e.target.parentElement);
-        if (e.ctrlKey) showMirrorTools(e.target.parentElement);
-    }
-});
+let selectedElement = toolsElem.querySelector('#penTools');
 
-specialMenuElem.addEventListener('click', e => {
-    const pElem = e.target.parentElement;
-    const id = pElem.id;
-    if (id && settings[id] !== undefined) {
-        if (id === 'fillrule') {
-            settings[id] = settings[id] === 'nonzero' ? 'evenodd' : 'nonzero';
-            console.log(settings[id], settings[id] === 'evenodd')
-            if (settings[id] === 'evenodd') pElem.classList.add('selected');
-            else pElem.classList.remove('selected');
-        } else {
-            settings[id] = !settings[id];
-            if (settings[id]) pElem.classList.add('selected');
-            else pElem.classList.remove('selected');
-        }
-    }
-})
+const addLayerElem = document.getElementById('addlayer');
+let selectedLayer = null;
 
-
+addLayer();
 
 function selectTool(tool) {
     selectedElement.classList.remove('selected');
@@ -115,6 +88,37 @@ function buildToolsElem(tool) {
     });
 }
 
+
+function getDragAfterElement(y) {
+    const elements = Array.from(layersElem.querySelectorAll('.layer:not(.dragging)'));
+    return elements.reduce(
+        (closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        },
+        { offset: Number.NEGATIVE_INFINITY }
+    ).element;
+}
+
+function selectLayer(layer) {
+    if (layer) {
+        if (selectedLayer) {
+            const canva = canvas.get(selectedLayer.dataset.id);
+            canva.canvas.style.zIndex = '0';
+            selectedLayer.classList.remove('selectedLayer');
+        }
+        const canva = canvas.get(layer.dataset.id);
+        canva.canvas.style.zIndex = '10';
+        layer.classList.add('selectedLayer');
+        selectedLayer = layer;
+    }
+}
+
 function addLayer() {
     const id = {
         unique: uuid(),
@@ -127,9 +131,40 @@ function addLayer() {
     layersElem.appendChild(layer);
     canvas.set(id.unique, new Canvas(id, rootElem, layer));
 
+
+    layer.addEventListener('click', e => {
+        selectLayer(e.currentTarget);
+    });
+    selectLayer(layer);
 }
 
-const addLayerElem = document.getElementById('addlayer');
+
+toolsElem.addEventListener("click", (e) => {
+    if (e.target.parentElement.id && toolsId.includes(e.target.id)) {
+        selectTool(e.target.parentElement);
+        if (e.ctrlKey) showMirrorTools(e.target.parentElement);
+        tools.selectedTool = e.target.id;
+    }
+});
+
+specialMenuElem.addEventListener('click', e => {
+    const pElem = e.target.parentElement;
+    const id = pElem.id;
+    if (id && settings[id] !== undefined) {
+        if (id === 'fillrule') {
+            settings[id] = settings[id] === 'nonzero' ? 'evenodd' : 'nonzero';
+            console.log(settings[id], settings[id] === 'evenodd')
+            if (settings[id] === 'evenodd') pElem.classList.add('selected');
+            else pElem.classList.remove('selected');
+        } else {
+            settings[id] = !settings[id];
+            if (settings[id]) pElem.classList.add('selected');
+            else pElem.classList.remove('selected');
+        }
+    }
+})
+
+
 
 addLayerElem.addEventListener('click', _ => {
     addLayer();
@@ -148,22 +183,6 @@ layersElem.addEventListener('dragend', (e) => {
     layer.classList.remove('dragging');
 });
 
-
-function getDragAfterElement(y) {
-    const elements = Array.from(layersElem.querySelectorAll('.layer:not(.dragging)'));
-    return elements.reduce(
-        (closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        },
-        { offset: Number.NEGATIVE_INFINITY }
-    ).element;
-}
 
 
 layersElem.addEventListener("dragover", (e) => {
