@@ -12,7 +12,7 @@ import { canvas, maincanvas, activeMetaData, rootElem } from "./scripts/shared/m
 import { v4 as uuid } from 'uuid';
 import settings from "./scripts/shared/settings.js";
 import Layer from "./scripts/core/canvas/layer.js";
-import { TOOLS_MENU } from "./scripts/shared/constants.js";
+import { TOOL_IDS, TOOLS_MENU } from "./scripts/shared/constants.js";
 const layersElem = document.getElementById('layers');
 
 CanvasRenderingContext2D.prototype.circle = function (x, y, radius = 2) {
@@ -148,23 +148,35 @@ function addLayer() {
 
 
 specialMenuElem.addEventListener('click', e => {
-    const pElem = e.target.parentElement;
-    const id = pElem.id;
-    if (id && settings[id] !== undefined) {
-        if (id === 'fillrule') {
-            settings[id] = settings[id] === 'nonzero' ? 'evenodd' : 'nonzero';
-            if (settings[id] === 'evenodd') pElem.classList.add('selected');
-            else pElem.classList.remove('selected');
-        } else if (id === 'fill') {
-            pElem.querySelector('img').src = settings[id] === true ? './images/tools/fill.svg' : './images/tools/stroke.svg';
-            settings[id] = !settings[id];
-        } else {
-            settings[id] = !settings[id];
-            if (settings[id]) pElem.classList.add('selected');
-            else pElem.classList.remove('selected');
-        }
-    }
+    const elem = e.target;
+    const id = elem.id;
+    toggleSpecialMenu(id);
 })
+
+function toggleSpecialMenu(menu) {
+    let elem;
+    if (menu instanceof HTMLElement) {
+        elem = pen;
+    } else {
+        elem = specialMenuElem.querySelector(`#${menu}`);
+    }
+
+    const id = elem.id;
+
+    if (!TOOL_IDS.includes(id) && settings[id] === undefined) return;
+    if (id === 'fillrule') {
+        settings[id] = settings[id] === 'nonzero' ? 'evenodd' : 'nonzero';
+        if (settings[id] === 'evenodd') elem.classList.add('selected');
+        else elem.classList.remove('selected');
+    } else if (id === 'fill') {
+        elem.src = settings[id] === true ? './images/tools/fill.svg' : './images/tools/stroke.svg';
+        settings[id] = !settings[id];
+    } else {
+        settings[id] = !settings[id];
+        if (settings[id]) elem.classList.add('selected');
+        else elem.classList.remove('selected');
+    }
+}
 
 addLayerElem.addEventListener('click', _ => {
     addLayer();
@@ -227,30 +239,36 @@ addEventListener('keydown', (e) => {
         case 'shift+v':
             selectPen('P-brush')
             break;
-        
+
         case 'r':
             selectPen('R-rectangle')
             break;
         case 'shift+r':
             selectPen('R-roundrectangle')
             break;
-        
+
         case 'c':
             selectPen('C-circle')
             break;
         case 'shift+c':
             selectPen('C-ellipse')
             break;
-        
+
         case 'l':
             selectPen('L-line')
             break;
-        
+
         case 'k':
             selectPen('K-quadratic')
             break;
         case 'shift+k':
             selectPen('K-bezier')
+            break;
+        case 'e':
+            toggleSpecialMenu('erase')
+            break;
+        case 'f':
+            toggleSpecialMenu('fill')
             break;
 
         default:
