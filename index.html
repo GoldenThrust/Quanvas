@@ -14,6 +14,12 @@
 <body>
     <header>
         <div id="special">
+            <div id="fill">
+                <img src="./images/tools/fill.svg" alt="Fill or Stroke Path">
+            </div>
+            <div id="erase">
+                <img src="./images/tools/eraser.svg" alt="Erase">
+            </div>
             <div id="fillrule">
                 <img src="./images/tools/fillrule.svg" alt="fill rule">
             </div>
@@ -26,27 +32,31 @@
         </div>
     </header>
     <main>
+        <aside id="toolsmenu">
+            <div id="P">
+                <img src="./images/tools/P-brush.svg" id="P-brush" alt="pen">
+            </div>
+            <div id="R">
+                <img src="./images/tools/R-roundrectangle.svg" id="R-roundrectangle" alt="Round Rect">
+            </div>
+            <div id="C">
+                <img src="./images/tools/C-ellipse.svg" id="C-ellipse" alt="Ellipse">
+            </div>
+            <div id="L">
+            </div>
+            <div id="K">
+                <img src="./images/tools/K-bezier.svg" id="K-bezier" alt="bezier">
+            </div>
+        </aside>
         <div id="tools">
-            <div id="penTools" title="ctrl v" class="selected">
-                <img src="./images/tools/pen.svg" id="pen" alt="pen">
-            </div>
-            <div id="rectangleTools">
-                <img src="./images/tools/rectangle.svg" id="rectangle" alt="rectangle">
-            </div>
-            <div id="circleTools">
-                <img src="./images/tools/circle.svg" id="circle" alt="circle">
-            </div>
-            <div id="lineTools">
-                <img src="./images/tools/line.svg" id="line" alt="line">
-            </div>
-            <div id="curveTools">
-                <img src="./images/tools/bezier.svg" id="bezier" alt="bezier curve">
-            </div>
-            <aside id="toolsmenu">
-
-            </aside>
+            <img src="./images/tools/P-pen.svg" id="P-pen" class="selected" alt="pen">
+            <img src="./images/tools/R-rectangle.svg" id="R-rectangle" alt="rectangle">
+            <img src="./images/tools/C-circle.svg" id="C-circle" alt="circle">
+            <img src="./images/tools/L-line.svg" id="L-line" alt="line">
+            <img src="./images/tools/K-quadratic.svg" id="K-quadratic" alt="quadratic curve">
         </div>
         <div id="root">
+            <canvas id="canvas"></canvas>
         </div>
         <div id="layersSection" draggable="true">
             <div id="layers">

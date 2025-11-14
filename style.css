@@ -42,12 +42,18 @@ canvas {
   position: absolute;
   top: 0;
   left: 0;
+  /* opacity: 0; */
 }
 
 main {
   display: grid;
   grid-template-columns: 8% 80% 12%;
   height: 92%;
+}
+
+#canvas {
+  z-index: 1;
+  /* opacity: 1; */
 }
 
 #root {
@@ -71,12 +77,17 @@ main {
   background-color: rgb(51, 49, 50);
 }
 
-:is(#tools, #toolsmenu) > div {
+#tools > img,
+#toolsmenu > div {
   width: 30px;
   height: 30px;
   border: 1px solid #666;
   border-radius: 5px;
   padding: 2px;
+}
+
+#toolsmenu > div {
+  display: none;
 }
 
 #special {
@@ -127,7 +138,7 @@ main {
 .layer span {
   padding: 3px;
   border-radius: 5px;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
   font-size: x-small;
   background-color: #8877851e;
   text-wrap: nowrap;
@@ -149,7 +160,7 @@ main {
   top: 0;
   left: 0;
   width: 50px;
-  z-index: 1;
+  z-index: 10;
   margin: 0;
   border: 1px solid;
   visibility: hidden;

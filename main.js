@@ -8,13 +8,21 @@
 //     });
 // }
 
-import Canvas from "./scripts/core/canvas.js";
-import { canvas, tools } from "./scripts/shared/main.js";
+import { canvas, maincanvas, activeMetaData, rootElem } from "./scripts/shared/main.js";
 import { v4 as uuid } from 'uuid';
 import settings from "./scripts/shared/settings.js";
-const rootElem = document.getElementById('root');
+import Layer from "./scripts/core/canvas/layer.js";
+import { TOOLS_MENU } from "./scripts/shared/constants.js";
 const layersElem = document.getElementById('layers');
 
+CanvasRenderingContext2D.prototype.circle = function (x, y, radius = 2) {
+    this.save()
+    this.beginPath();
+    this.fillStyle = 'red';
+    this.arc(x, y, radius, 0, Math.PI * 2);
+    this.fill();
+    this.restore();
+}
 
 // Prevent right-click context menu
 window.addEventListener("contextmenu", function (e) {
@@ -22,71 +30,73 @@ window.addEventListener("contextmenu", function (e) {
 }, false);
 
 
-
-const toolsId = [
-    'pen', 'pen2',
-    'rectangle', 'round-rectangle',
-    'circle', 'ellipse',
-    'line', 'arc-to',
-    'bezier', 'quadratic',
-    'add-layer',
-    'clipboard',
-    'eraser', 'fillrule',
-    'nomove'
-]
-
-const toolsMenu = {
-    'penTools': [toolsId[0], toolsId[1]],
-    'rectangleTools': [toolsId[2], toolsId[3]],
-    'circleTools': [toolsId[4], toolsId[5]],
-    'lineTools': [toolsId[6], toolsId[7]],
-    'curveTools': [toolsId[8], toolsId[9]],
-}
-
-
 const toolsElem = document.getElementById("tools");
 const toolsMenuElem = document.getElementById('toolsmenu');
 const specialMenuElem = document.getElementById('special');
 
-let selectedElement = toolsElem.querySelector('#penTools');
+let selectedElement = toolsElem.querySelector(`#${activeMetaData.selectedTool}`);
 
 const addLayerElem = document.getElementById('addlayer');
-let selectedLayer = null;
 
 addLayer();
+selectPen('P-pen');
 
-function selectTool(tool) {
+function selectPen(pen) {
+    let elem;
+    if (pen instanceof HTMLElement) {
+        elem = pen;
+    } else {
+        const toolsMenu = TOOLS_MENU[pen[0]];
+
+        for (let i = 0; i < toolsMenu.length; i++) {
+            if (toolsMenu[i] == pen) {
+                elem = document.getElementById(pen);
+            };
+        }
+    }
+
     selectedElement.classList.remove('selected');
-    tool.classList.add('selected');
-    selectedElement = tool;
+    let selectedElem = toolsElem.querySelector(`#${elem.id}`);
+    if (!selectedElem) {
+        selectedElem = toolsElem.querySelector(`[id^=${elem.id[0]}]`);
+        const tempSrc = elem.src;
+        const tempId = elem.id;
+        elem.src = selectedElem.src;
+        elem.id = selectedElem.id;
+        selectedElem.src = tempSrc;
+        selectedElem.id = tempId;
+        selectedElem.classList.add('selected');
+        selectedElement = selectedElem;
+    } else {
+        selectedElement = elem;
+    }
+    selectedElement.classList.add('selected');
+
+    activeMetaData.selectedTool = selectedElement.id;
 }
 
-function showMirrorTools(tool) {
-    const { top, right } = tool.getBoundingClientRect();
-    toolsMenuElem.style.top = top + 'px';
-    toolsMenuElem.style.left = (right + 10) + 'px';
-    buildToolsElem(tool);
-    toolsMenuElem.style.visibility = 'visible';
-}
+toolsMenuElem.addEventListener('click', (e) => {
+    toolsMenuElem.style.visibility = 'hidden';
+    if (!TOOLS_MENU[e.target.id[0]]?.includes(e.target.id)) return;
+    selectPen(e.target);
+})
 
-function buildToolsElem(tool) {
-    toolsMenuElem.innerText = '';
-    toolsMenu[tool.id].forEach(id => {
-        const div = document.createElement('div');
-        div.dataset.name = id;
-        const img = document.createElement('img');
-        img.src = `./images/tools/${id}.svg`;
-        div.appendChild(img);
-        div.addEventListener('click', e => {
-            tool.innerText = '';
-            const tImg = img.cloneNode();
-            tImg.id = id;
-            tool.appendChild(tImg);
-            toolsMenuElem.style.visibility = 'hidden';
-        })
-        toolsMenuElem.appendChild(div);
-    });
-}
+toolsElem.addEventListener("click", (e) => {
+    toolsMenuElem.style.visibility = 'hidden';
+    const tool = e.target;
+    if (!TOOLS_MENU[tool.id[0]]?.includes(tool.id)) return;
+    const prevM = toolsMenuElem.querySelector(`#${selectedElement.id[0]}`);
+    const newM = toolsMenuElem.querySelector(`#${tool.id[0]}`);
+    prevM.style.display = 'none';
+    newM.style.display = 'flex';
+    if (e.ctrlKey && TOOLS_MENU[tool.id[0]].length > 1) {
+        const { top, right } = tool.getBoundingClientRect();
+        toolsMenuElem.style.top = top + 'px';
+        toolsMenuElem.style.left = (right + 10) + 'px';
+        toolsMenuElem.style.visibility = 'visible';
+    }
+    selectPen(tool);
+});
 
 
 function getDragAfterElement(y) {
@@ -106,16 +116,14 @@ function getDragAfterElement(y) {
 }
 
 function selectLayer(layer) {
+    const selectedLayer = activeMetaData.selectedLayer;
     if (layer) {
         if (selectedLayer) {
-            const canva = canvas.get(selectedLayer.dataset.id);
-            canva.canvas.style.zIndex = '0';
-            selectedLayer.classList.remove('selectedLayer');
+            const canva = canvas.get(selectedLayer);
+            canva.layer.classList.remove('selectedLayer');
         }
-        const canva = canvas.get(layer.dataset.id);
-        canva.canvas.style.zIndex = '10';
         layer.classList.add('selectedLayer');
-        selectedLayer = layer;
+        activeMetaData.selectedLayer = layer.dataset.id;
     }
 }
 
@@ -128,8 +136,8 @@ function addLayer() {
     layer.classList.add('layer');
     layer.draggable = true;
     layer.dataset.id = id.unique;
-    layersElem.appendChild(layer);
-    canvas.set(id.unique, new Canvas(id, rootElem, layer));
+    layersElem.prepend(layer);
+    canvas.set(id.unique, new Layer(id, layer));
 
 
     layer.addEventListener('click', e => {
@@ -139,23 +147,17 @@ function addLayer() {
 }
 
 
-toolsElem.addEventListener("click", (e) => {
-    if (e.target.parentElement.id && toolsId.includes(e.target.id)) {
-        selectTool(e.target.parentElement);
-        if (e.ctrlKey) showMirrorTools(e.target.parentElement);
-        tools.selectedTool = e.target.id;
-    }
-});
-
 specialMenuElem.addEventListener('click', e => {
     const pElem = e.target.parentElement;
     const id = pElem.id;
     if (id && settings[id] !== undefined) {
         if (id === 'fillrule') {
             settings[id] = settings[id] === 'nonzero' ? 'evenodd' : 'nonzero';
-            console.log(settings[id], settings[id] === 'evenodd')
             if (settings[id] === 'evenodd') pElem.classList.add('selected');
             else pElem.classList.remove('selected');
+        } else if (id === 'fill') {
+            pElem.querySelector('img').src = settings[id] === true ? './images/tools/fill.svg' : './images/tools/stroke.svg';
+            settings[id] = !settings[id];
         } else {
             settings[id] = !settings[id];
             if (settings[id]) pElem.classList.add('selected');
@@ -164,12 +166,9 @@ specialMenuElem.addEventListener('click', e => {
     }
 })
 
-
-
 addLayerElem.addEventListener('click', _ => {
     addLayer();
 })
-
 
 layersElem.addEventListener('dragstart', (e) => {
     const layer = e.target.closest('.layer');
@@ -182,8 +181,6 @@ layersElem.addEventListener('dragend', (e) => {
     if (!layer) return;
     layer.classList.remove('dragging');
 });
-
-
 
 layersElem.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -210,3 +207,53 @@ layersElem.addEventListener("dragover", (e) => {
 
     // }
 });
+
+
+// Keybinding
+addEventListener('keydown', (e) => {
+    e.preventDefault();
+    let keyBind = '';
+
+    if (e.ctrlKey) keyBind += 'ctrl+';
+    if (e.shiftKey) keyBind += 'shift+';
+    if (e.altKey) keyBind += 'alt+'
+    keyBind += e.key;
+    console.log(keyBind)
+
+    switch (keyBind.toLowerCase()) {
+        case 'v':
+            selectPen('P-pen')
+            break;
+        case 'shift+v':
+            selectPen('P-brush')
+            break;
+        
+        case 'r':
+            selectPen('R-rectangle')
+            break;
+        case 'shift+r':
+            selectPen('R-roundrectangle')
+            break;
+        
+        case 'c':
+            selectPen('C-circle')
+            break;
+        case 'shift+c':
+            selectPen('C-ellipse')
+            break;
+        
+        case 'l':
+            selectPen('L-line')
+            break;
+        
+        case 'k':
+            selectPen('K-quadratic')
+            break;
+        case 'shift+k':
+            selectPen('K-bezier')
+            break;
+
+        default:
+            break;
+    }
+})
