@@ -25,9 +25,9 @@ CanvasRenderingContext2D.prototype.circle = function (x, y, radius = 2) {
 }
 
 // Prevent right-click context menu
-window.addEventListener("contextmenu", function (e) {
-    e.preventDefault();
-}, false);
+// window.addEventListener("contextmenu", function (e) {
+//     e.preventDefault();
+// }, false);
 
 
 const toolsElem = document.getElementById("tools");
@@ -161,7 +161,7 @@ function toggleSpecialMenu(menu) {
         elem = specialMenuElem.querySelector(`#${menu}`);
     }
 
-    const id = elem.id;
+    const id = elem?.id;
 
     if (!TOOL_IDS.includes(id) && settings[id] === undefined) return;
     if (id === 'fillrule') {
@@ -257,6 +257,9 @@ addEventListener('keydown', (e) => {
         case 'l':
             selectPen('L-line')
             break;
+        case 'shift+l':
+            selectPen('L-arcto')
+            break;
 
         case 'k':
             selectPen('K-quadratic')
@@ -269,6 +272,10 @@ addEventListener('keydown', (e) => {
             break;
         case 'f':
             toggleSpecialMenu('fill')
+            break;
+
+        case 'escape':
+            maincanvas.releasePath()
             break;
 
         default:

@@ -50,9 +50,9 @@ export default class Layer {
     drawPath(path, fill) {
         if (fill) {
             this.ctx.fill(path);
-        } else {
-            this.ctx.stroke(path);
         }
+        
+        this.ctx.stroke(path);
         this.lctx.clearRect(0, 0, this.layerCanvas.width, this.layerCanvas.height);
         this.lctx.drawImage(this.canvas, 0, 0, this.layerCanvas.width, this.layerCanvas.height);
     }

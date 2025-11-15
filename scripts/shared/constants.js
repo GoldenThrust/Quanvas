@@ -14,6 +14,6 @@ export const TOOLS_MENU = {
     'P': ['P-pen', 'P-brush'],
     'R': ['R-rectangle', 'R-roundrectangle'],
     'C': ['C-circle', 'C-ellipse'],
-    'L': ['L-line'],
+    'L': ['L-line', 'L-arcto'],
     'K': ['K-quadratic', 'K-bezier'],
 };
