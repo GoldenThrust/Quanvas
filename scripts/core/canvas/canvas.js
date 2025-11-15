@@ -40,7 +40,8 @@ export default class Canvas {
 
     #eventlistener() {
         this.canvas.addEventListener('mousedown', (e) => {
-            this.#flushDrawing();
+            if (!['L', 'K'].includes(activeMetaData.selectedTool[0]))
+                this.#flushDrawing();
             this.createPath();
             const rect = this.canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -68,7 +69,7 @@ export default class Canvas {
             }
         });
 
-        window.addEventListener('mouseup', () => this.#flushDrawing());
+        this.canvas.addEventListener('mouseup', () => this.#flushDrawing());
         this.canvas.addEventListener('mouseleave', () => this.#flushDrawing());
     }
 
@@ -76,7 +77,7 @@ export default class Canvas {
         if (!this.currentPathProp || !this.currentPathProp.metadata) return;
         this.draw(this.previousPosition.x, this.previousPosition.y, activeMetaData, settings);
 
-        if (this.currentPathProp.metadata?.selectedTool?.[0] === 'L') {
+        if (this.currentPathProp.metadata?.selectedTool?.[0] === 'L' && this.flush) {
             this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y });
             this.flush = false;
         }
@@ -129,7 +130,7 @@ export default class Canvas {
         this.#clear();
         this.createPath()
         if (this.memorizePath.length) {
-            this.ctx.lineTo(this.memorizePath[0].x, this.memorizePath[0].y);
+            this.ctx.moveTo(this.memorizePath[0].x, this.memorizePath[0].y);
             this.currentPathProp.path.moveTo(this.memorizePath[0].x, this.memorizePath[0].y);
         } else {
             this.memorizePath.push({ x: this.initialPosition.x, y: this.initialPosition.y })
@@ -138,6 +139,7 @@ export default class Canvas {
     }
 
     draw(x, y, activeMetaData, settings) {
+        // console.clear();
         this.currentPathProp.metadata = activeMetaData;
         this.currentPathProp.settings = settings;
 
@@ -311,15 +313,20 @@ export default class Canvas {
 
     #arcTo(x, y) {
         this.#drawline();
-        for (let i = 1; i < this.memorizePath.length; i++) {
-            const p = this.memorizePath[i - 1 < 0 ? 0 : i - 1];
-            const c = this.memorizePath[i];
-            const radius = Math.hypot(p.x - c.x, p.y - c.y);
-
-            this.currentPathProp.path?.arcTo?.(p.x, p.y, c.x, c.y, radius)
+        const path = [...this.memorizePath, { x, y }];
+        const count = path.length - 1;
+        for (let i = 1; i < count; i++) {
+            const p = path[i - 1];
+            const cp = path[i];
+            const p2 = path[i + 1];
+            const radius = Math.hypot(p.x - cp.x, p.y - cp.y) / 4;
+            this.ctx.arcTo(cp.x, cp.y, p2.x, p2.y, radius);
+            this.currentPathProp.path?.arcTo?.(cp.x, cp.y, p2.x, p2.y, radius);
 
         }
-        this.currentPathProp.path?.lineTo?.(x, y);
+
+        this.ctx.lineTo(x, y);
+        // this.currentPathProp.path?.lineTo?.(x, y);
     }
 
     #bezier(x, y) {

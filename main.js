@@ -15,12 +15,22 @@ import Layer from "./scripts/core/canvas/layer.js";
 import { TOOL_IDS, TOOLS_MENU } from "./scripts/shared/constants.js";
 const layersElem = document.getElementById('layers');
 
-CanvasRenderingContext2D.prototype.circle = function (x, y, radius = 2) {
+CanvasRenderingContext2D.prototype.circle = function (x, y, color = 'yellow', radius = 4) {
     this.save()
     this.beginPath();
-    this.fillStyle = 'red';
+    this.fillStyle = color;
     this.arc(x, y, radius, 0, Math.PI * 2);
     this.fill();
+}
+CanvasRenderingContext2D.prototype.mark = function (x, y, text, color = 'yellow', radius = 4) {
+    this.save()
+    // this.beginPath();
+    // this.fillStyle = 'red';
+    // this.arc(x, y, radius, 0, Math.PI * 2);
+    // this.fill();
+    this.fillStyle = color;
+    this.fillRect(x - radius / 2, y - radius / 2, radius, radius)
+    this.fillText(text, x, y);
     this.restore();
 }
 
@@ -38,8 +48,8 @@ let selectedElement = toolsElem.querySelector(`#${activeMetaData.selectedTool}`)
 
 const addLayerElem = document.getElementById('addlayer');
 
+selectPen('L-arcto');
 addLayer();
-selectPen('P-pen');
 
 function selectPen(pen) {
     let elem;
