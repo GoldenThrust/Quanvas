@@ -17,10 +17,11 @@ const layersElem = document.getElementById('layers');
 
 CanvasRenderingContext2D.prototype.circle = function (x, y, color = 'yellow', radius = 4) {
     this.save()
-    this.beginPath();
+    const c = new Path2D();
     this.fillStyle = color;
-    this.arc(x, y, radius, 0, Math.PI * 2);
-    this.fill();
+    c.arc(x, y, radius, 0, Math.PI * 2);
+    this.fill(c);
+    this.restore();
 }
 CanvasRenderingContext2D.prototype.mark = function (x, y, text, color = 'yellow', radius = 4) {
     this.save()
@@ -48,10 +49,11 @@ let selectedElement = toolsElem.querySelector(`#${activeMetaData.selectedTool}`)
 
 const addLayerElem = document.getElementById('addlayer');
 
-selectPen('L-arcto');
+selectPen('K-quadratic');
 addLayer();
 
 function selectPen(pen) {
+    maincanvas.releasePath();
     let elem;
     if (pen instanceof HTMLElement) {
         elem = pen;
@@ -243,10 +245,10 @@ addEventListener('keydown', (e) => {
     console.log(keyBind)
 
     switch (keyBind.toLowerCase()) {
-        case 'v':
+        case 'p':
             selectPen('P-pen')
             break;
-        case 'shift+v':
+        case 'shift+p':
             selectPen('P-brush')
             break;
 

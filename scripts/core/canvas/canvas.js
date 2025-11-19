@@ -2,6 +2,7 @@ import { activeMetaData, rootElem } from "../../shared/main.js";
 import settings from "../../shared/settings.js";
 import { lerp, random } from "../../utils/random.js";
 import { canvas } from "../../shared/main.js";
+import { calculateTangent, getNormal } from "../../utils/vector.js";
 
 export default class Canvas {
     constructor(canvas) {
@@ -29,6 +30,7 @@ export default class Canvas {
         this.isDrawing = false;
         this.flush = true;
         this.memorizePath = [];
+        this.pointsCount = 0;
 
         this.#eventlistener();
     }
@@ -70,22 +72,31 @@ export default class Canvas {
         });
 
         this.canvas.addEventListener('mouseup', () => this.#flushDrawing());
-        this.canvas.addEventListener('mouseleave', () => this.#flushDrawing());
+        // this.canvas.addEventListener('mouseleave', () => this.#flushDrawing());
+    }
+
+    #reset() {
+        this.#clear();
+        this.isDrawing = false;
+        this.currentPathProp = { path: null, settings: null, metadata: false, points: [] };
+        this.memorizePath = [];
+        this.pointsCount = 0;
     }
 
     #flushDrawing(flush) {
         if (!this.currentPathProp || !this.currentPathProp.metadata) return;
         this.draw(this.previousPosition.x, this.previousPosition.y, activeMetaData, settings);
+        this.pointsCount++;
 
-        if (this.currentPathProp.metadata?.selectedTool?.[0] === 'L' && this.flush) {
+        if (['K', 'L'].includes(activeMetaData.selectedTool[0]) && this.flush) {
             this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y });
+            this.#createCurve();
             this.flush = false;
         }
 
         if (flush !== undefined) this.flush = flush;
 
         if (this.flush) {
-            this.isDrawing = false;
             const layer = canvas.get(activeMetaData.selectedLayer);
 
             if (layer && typeof layer.drawPath === 'function') {
@@ -94,12 +105,8 @@ export default class Canvas {
             }
 
             this.currentPathProp.points = Array.from(this.memorizePath);
-            this.#clear();
             this.path.add(this.currentPathProp);
-
-            // reset current path container; next createPath will replace it
-            this.currentPathProp = { path: null, settings: null, metadata: false, points: [] };
-            this.memorizePath = [];
+            this.#reset()
             console.log('Path added. Total paths:', this.path.size);
         }
 
@@ -107,6 +114,7 @@ export default class Canvas {
     }
 
     releasePath() {
+        if ((['L',].includes(activeMetaData.selectedTool[0]) && this.memorizePath.length < 2) || (['P', 'K'].includes(activeMetaData.selectedTool[0]) && this.memorizePath.length < 3)) return this.#reset();
         this.#flushDrawing(true);
     }
 
@@ -126,6 +134,37 @@ export default class Canvas {
         this.currentPathProp.path?.lineTo?.(this.previousPosition.x, this.previousPosition.y);
     }
 
+    #createCurve() {
+        const mLen = this.memorizePath.length;
+        if (activeMetaData.selectedTool === 'K-quadratic') {
+            this.memorizePath[mLen - 1]['type'] = this.pointsCount % 2 === 1 ? 'quad' : 'point';
+        } else if (activeMetaData.selectedTool === 'K-bezier') {
+            this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y, type: 'corner' });
+            this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y, type: 'corner' });
+            if (this.pointsCount === 3) {
+                const { prev, next } = this.#computeHandle(this.memorizePath[mLen - 6], this.memorizePath[mLen - 9], this.memorizePath[mLen - 3]);
+                this.memorizePath[mLen - 7] = prev;
+                this.memorizePath[mLen - 5] = next;
+            }
+        }
+    }
+
+    #computeHandle(p, pPrev, pNext) {
+        const mLen = this.memorizePath.length;
+
+        if (mLen === 9) {
+            const { ux, uy } = calculateTangent(pPrev, pNext);
+            const k = 0.25;
+
+            const lenPrev = Math.hypot(p.x - pPrev.x, p.y - pPrev.y);
+            const lenNext = Math.hypot(p.x - pNext.x, p.y - pNext.y);
+
+            const len = k * Math.min(lenPrev, lenNext);
+
+            return { prev: { x: p.x - ux * len, y: p.y - uy * len, type: 'corner' }, next: { x: p.x + ux * len, y: p.y + uy * len, type: 'corner' } };
+        }
+    }
+
     #drawline() {
         this.#clear();
         this.createPath()
@@ -134,6 +173,7 @@ export default class Canvas {
             this.currentPathProp.path.moveTo(this.memorizePath[0].x, this.memorizePath[0].y);
         } else {
             this.memorizePath.push({ x: this.initialPosition.x, y: this.initialPosition.y })
+            this.#createCurve();
             this.#moveToInitialPosition();
         }
     }
@@ -143,7 +183,7 @@ export default class Canvas {
         this.currentPathProp.metadata = activeMetaData;
         this.currentPathProp.settings = settings;
 
-        const drawGPath = ['P', 'L'].includes(activeMetaData.selectedTool[0]);
+        const drawGPath = ['P', 'L', 'K'].includes(activeMetaData.selectedTool[0]);
         if (drawGPath)
             this.ctx.beginPath();
         if (!settings.erase) {
@@ -330,21 +370,37 @@ export default class Canvas {
     }
 
     #bezier(x, y) {
-        this.#moveToInitialPosition();
-        const path = this.currentPathProp.path;
-        const cp1x = this.initialPosition.x + (x - this.initialPosition.x) / 3;
-        const cp1y = this.initialPosition.y;
-        const cp2x = this.initialPosition.x + (x - this.initialPosition.x) * 2 / 3;
-        const cp2y = y;
-        path?.bezierCurveTo?.(cp1x, cp1y, cp2x, cp2y, x, y);
+        console.clear();
+        this.#drawline();
+        const path = this.memorizePath;
+        const count = path.length - 1;
+        for (let i = 1; i < count; i += 3) {
+            const cp1 = path[i];
+            const cp2 = path[i + 1];
+            const p = path[i + 2];
+            this.ctx.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, x, y);
+            this.currentPathProp.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, x, y);
+        }
+
+        // console.log(path[count - 1], path[count]);
+        // console.log(path);
+
+        // this.ctx.bezierCurveTo?.(snormal.x, snormal.y, enormal.x, enormal.y, x, y);
     }
 
     #quadratic(x, y) {
-        this.#moveToInitialPosition();
-        const path = this.currentPathProp.path;
-        const cpX = (this.initialPosition.x + x) / 2;
-        const cpY = this.initialPosition.y;
-        path?.quadraticCurveTo?.(cpX, cpY, x, y);
+        this.#drawline();
+        const path = this.memorizePath;
+        const count = path.length - 1;
+        for (let i = 1; i < count; i += 2) {
+            const p = path[i + 1];
+            const cp = path[i];
+            this.ctx.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
+            this.currentPathProp.path?.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
+            this.ctx.circle(p.x, p.y, p.cp ? 'purple' : 'maroon')
+        }
+
+        this.ctx.quadraticCurveTo?.(path[count].x, path[count].y, x, y);
     }
 
 
