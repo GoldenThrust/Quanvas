@@ -15,12 +15,29 @@ import Layer from "./scripts/core/canvas/layer.js";
 import { TOOL_IDS, TOOLS_MENU } from "./scripts/shared/constants.js";
 const layersElem = document.getElementById('layers');
 
-CanvasRenderingContext2D.prototype.circle = function (x, y, color = 'yellow', radius = 4) {
+CanvasRenderingContext2D.prototype.circle = function (x, y, color = 'yellow', text = '', radius = 2) {
     this.save()
     const c = new Path2D();
     this.fillStyle = color;
     c.arc(x, y, radius, 0, Math.PI * 2);
     this.fill(c);
+    this.fillText(text, x, y - 10);
+    this.restore();
+}
+CanvasRenderingContext2D.prototype.line = function (points, color = 'blue', radius = 4) {
+    this.save()
+    const c = new Path2D();
+    this.strokeStyle = color;
+    points.forEach(({ x, y }, i) => {
+        if (i) {
+            c.lineTo(x, y);
+            console.log('line');
+        } else {
+            c.moveTo(x, y);
+            console.log('move')
+        }
+    });
+    this.stroke(c);
     this.restore();
 }
 CanvasRenderingContext2D.prototype.mark = function (x, y, text, color = 'yellow', radius = 4) {
@@ -49,7 +66,7 @@ let selectedElement = toolsElem.querySelector(`#${activeMetaData.selectedTool}`)
 
 const addLayerElem = document.getElementById('addlayer');
 
-selectPen('K-quadratic');
+selectPen('K-bezier');
 addLayer();
 
 function selectPen(pen) {

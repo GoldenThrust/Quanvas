@@ -2,7 +2,7 @@ import { activeMetaData, rootElem } from "../../shared/main.js";
 import settings from "../../shared/settings.js";
 import { lerp, random } from "../../utils/random.js";
 import { canvas } from "../../shared/main.js";
-import { calculateTangent, getNormal } from "../../utils/vector.js";
+import { calculateNormal, calculateTangent, getNormal } from "../../utils/vector.js";
 
 export default class Canvas {
     constructor(canvas) {
@@ -141,28 +141,30 @@ export default class Canvas {
         } else if (activeMetaData.selectedTool === 'K-bezier') {
             this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y, type: 'corner' });
             this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y, type: 'corner' });
-            if (this.pointsCount === 3) {
-                const { prev, next } = this.#computeHandle(this.memorizePath[mLen - 6], this.memorizePath[mLen - 9], this.memorizePath[mLen - 3]);
-                this.memorizePath[mLen - 7] = prev;
-                this.memorizePath[mLen - 5] = next;
-            }
+            // const handle = this.#computeHandle(this.memorizePath?.[mLen - 6], this.memorizePath?.[mLen - 9], this.memorizePath?.[mLen - 3]);
+            // if (this.pointsCount === 3 && handle) {
+            //     const { prev, next } = handle;
+            //     this.memorizePath[mLen - 7] = prev;
+            //     this.memorizePath[mLen - 5] = next;
+            // }
         }
+
+        console.log(this.memorizePath.length);
     }
 
     #computeHandle(p, pPrev, pNext) {
-        const mLen = this.memorizePath.length;
+        console.log(p, pPrev, pNext);
+        if (!(p && pPrev && pNext)) return;
 
-        if (mLen === 9) {
-            const { ux, uy } = calculateTangent(pPrev, pNext);
-            const k = 0.25;
+        const { ux, uy } = calculateTangent(pPrev, pNext);
+        const k = 0.25;
 
-            const lenPrev = Math.hypot(p.x - pPrev.x, p.y - pPrev.y);
-            const lenNext = Math.hypot(p.x - pNext.x, p.y - pNext.y);
+        const lenPrev = Math.hypot(p.x - pPrev.x, p.y - pPrev.y);
+        const lenNext = Math.hypot(p.x - pNext.x, p.y - pNext.y);
 
-            const len = k * Math.min(lenPrev, lenNext);
+        const len = k * Math.min(lenPrev, lenNext);
 
-            return { prev: { x: p.x - ux * len, y: p.y - uy * len, type: 'corner' }, next: { x: p.x + ux * len, y: p.y + uy * len, type: 'corner' } };
-        }
+        return { prev: { x: p.x - ux * len, y: p.y - uy * len, type: 'corner' }, next: { x: p.x + ux * len, y: p.y + uy * len, type: 'corner' } };
     }
 
     #drawline() {
@@ -244,6 +246,8 @@ export default class Canvas {
         }
     }
 
+    #penp
+
     #pen(x, y) {
         this.#moveToPreviousPosition();
         this.ctx.lineTo(x, y);
@@ -306,6 +310,24 @@ export default class Canvas {
 
 
         // path.arc(x, y, 2, 0, Math.PI * 2);
+    }
+
+    #testBrush(x, y) {
+        this.#moveToPreviousPosition();
+        const path = this.currentPathProp.path;
+        const tangent = calculateTangent({ x, y }, this.previousPosition);
+        const normal = calculateNormal(tangent);
+
+        const stepDX = tangent.ux;
+        const stepDY = tangent.uy;
+
+        for (let i = 0; i < Math.floor(radius); i++) {
+            const xs = (x + (stepDX * i)) + random(-5, 5);
+            const ys = (y + (stepDY * i)) + random(-5, 5);
+            // path.moveTo(x + (stepDX * i), (y + (stepDY * i)));
+            this.ctx.arc(xs, ys, 0.5, 0, Math.PI * 2)
+            path.arc(xs, ys, 0.5, 0, Math.PI * 2);
+        }
     }
 
     // rebuild() {
@@ -372,20 +394,37 @@ export default class Canvas {
     #bezier(x, y) {
         console.clear();
         this.#drawline();
+        const count = this.memorizePath.length;
+        this.memorizePath[count - 1] = { x, y, type: 'corner' }
+
+        const handle = this.#computeHandle(this.memorizePath?.[count - 3], this.memorizePath?.[count - 6], { x, y });
+
+        if (handle) {
+            const { prev, next } = handle;
+            console.log('handle')
+            this.memorizePath[count - 4] = prev;
+            this.memorizePath[count - 2] = next;
+        }
+
         const path = this.memorizePath;
-        const count = path.length - 1;
-        for (let i = 1; i < count; i += 3) {
+
+        for (let i = 1; i < count - 2; i += 3) {
             const cp1 = path[i];
             const cp2 = path[i + 1];
             const p = path[i + 2];
-            this.ctx.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, x, y);
-            this.currentPathProp.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, x, y);
+            this.ctx.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
+            this.currentPathProp.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
+            // this.ctx.circle(cp1.x, cp1.y - 10, 'red', `${i} C1 ${Math.round(cp1.x)} ${Math.round(cp1.y)}`);
+            // this.ctx.circle(cp2.x, cp2.y - 20, 'green', `${i} C2 ${Math.round(cp2.x)} ${Math.round(cp2.y)}`);
+            // this.ctx.circle(p.x, p.y, 'blue', `${i} P ${Math.round(p.x)} ${Math.round(p.y)}`);
         }
 
-        // console.log(path[count - 1], path[count]);
-        // console.log(path);
+        this.ctx.bezierCurveTo?.(path[count - 2].x, path[count - 2].y, path[count - 1].x, path[count - 1].y, x, y);
 
-        // this.ctx.bezierCurveTo?.(snormal.x, snormal.y, enormal.x, enormal.y, x, y);
+        // this.ctx.circle(path[0].x, path[0].y, 'black', `P ${Math.round(path[0].x)} ${Math.round(path[0].y)}`);
+        // this.ctx.circle(path[count - 2].x, path[count - 2].y - 10, 'cyan', `C1 ${Math.round(path[count - 2].x)} ${Math.round(path[count - 2].y)}`);
+        // this.ctx.circle(path[count - 1].x, path[count - 1].y - 20, 'magenta', `C2 ${Math.round(path[count - 1].x)} ${Math.round(path[count - 1].y)}`);
+        // this.ctx.circle(x, y, 'yellow', `P ${Math.round(x)} ${Math.round(y)}`);
     }
 
     #quadratic(x, y) {

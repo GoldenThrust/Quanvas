@@ -54,6 +54,7 @@ main {
 #canvas {
   z-index: 1;
   /* opacity: 1; */
+  color: magenta;
 }
 
 #root {
