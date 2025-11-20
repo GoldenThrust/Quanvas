@@ -66,7 +66,7 @@ let selectedElement = toolsElem.querySelector(`#${activeMetaData.selectedTool}`)
 
 const addLayerElem = document.getElementById('addlayer');
 
-selectPen('K-bezier');
+selectPen('P-brush');
 addLayer();
 
 function selectPen(pen) {
@@ -183,6 +183,7 @@ specialMenuElem.addEventListener('click', e => {
 })
 
 function toggleSpecialMenu(menu) {
+    maincanvas.releasePath();
     let elem;
     if (menu instanceof HTMLElement) {
         elem = pen;

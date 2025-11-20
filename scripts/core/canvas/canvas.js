@@ -101,7 +101,7 @@ export default class Canvas {
 
             if (layer && typeof layer.drawPath === 'function') {
                 const fillFlag = !!this.currentPathProp.settings?.fill;
-                layer.drawPath(this.currentPathProp.path, fillFlag);
+                layer.drawPath(this.currentPathProp.path, fillFlag, this.currentPathProp.metadata.selectedTool);
             }
 
             this.currentPathProp.points = Array.from(this.memorizePath);
@@ -129,9 +129,14 @@ export default class Canvas {
         this.currentPathProp.path.moveTo(this.initialPosition.x, this.initialPosition.y);
     }
 
-    #moveToPreviousPosition(line = true) {
-        this.ctx.lineTo(this.previousPosition.x, this.previousPosition.y);
-        this.currentPathProp.path?.lineTo?.(this.previousPosition.x, this.previousPosition.y);
+    #moveToPreviousPosition() {
+        if (this.currentPathProp.settings.fill) {
+            this.ctx.lineTo(this.previousPosition.x, this.previousPosition.y);
+            this.currentPathProp.path?.lineTo?.(this.previousPosition.x, this.previousPosition.y);
+        } else {
+            this.ctx.moveTo(this.previousPosition.x, this.previousPosition.y);
+            this.currentPathProp.path?.moveTo?.(this.previousPosition.x, this.previousPosition.y);
+        }
     }
 
     #createCurve() {
@@ -225,8 +230,8 @@ export default class Canvas {
                     break;
             }
 
-            this.ctx.fillStyle = 'red';
-            this.ctx.strokeStyle = 'yellow';
+            // this.ctx.fillStyle = 'red';
+            // this.ctx.strokeStyle = 'yellow';
 
 
             if (settings.fill && !drawGPath) {
@@ -246,8 +251,6 @@ export default class Canvas {
         }
     }
 
-    #penp
-
     #pen(x, y) {
         this.#moveToPreviousPosition();
         this.ctx.lineTo(x, y);
@@ -257,84 +260,29 @@ export default class Canvas {
     #brush(x, y) {
         this.#moveToPreviousPosition();
         const path = this.currentPathProp.path;
-        const dX = this.previousPosition.x - x;
-        const dY = this.previousPosition.y - y;
-        const radius = Math.hypot(dX, dY);
-        if (radius <= 0) {
-            // nothing to interpolate, draw a small dot
-            this.ctx.beginPath();
-            this.ctx.arc(x, y, 0.5, 0, Math.PI * 2);
-            path?.arc?.(x, y, 0.5, 0, Math.PI * 2);
-            return;
-        }
-
-        const stepDX = dX / radius;
-        const stepDY = dY / radius;
-        for (let i = 0; i < Math.floor(radius); i++) {
-            for (let j = 0; j < 2; j++) {
-                const xs = (x + (stepDX * i)) + random(-5, 5);
-                const ys = (y + (stepDY * i)) + random(-5, 5);
-                // path.moveTo(x + (stepDX * i), (y + (stepDY * i)));
-                this.ctx.arc(xs, ys, 0.5, 0, Math.PI * 2)
-                path.arc(xs, ys, 0.5, 0, Math.PI * 2);
-            }
-        }
-        // path.arc(x, y, 2, 0, Math.PI * 2);
-    }
-
-    #paint(x, y) {
-        this.#moveToPreviousPosition(x, y);
-        const path = this.currentPathProp.path;
-        const dX = this.previousPosition.x - x;
-        const dY = this.previousPosition.y - y;
-        const radius = Math.hypot(dX, dY);
-        const stepDX = dX / radius;
-        const stepDY = dY / radius;
-
-        const cut = 5;
-        const spread = Math.PI * 2;
-
-        for (let i = 0; i < radius; i++) {
-            for (let j = 0; j < cut; j++) {
-                const alpha = lerp(
-                    spread / 2,
-                    -spread / 2,
-                    cut === 1 ? 0.5 : j / (cut - 1)
-                );
-
-                // path.moveTo((x + (stepDX * i)) + Math.cos(alpha) * (10), (y + (stepDY * i)) + Math.sin(alpha) * (10));
-                path.arc((x + (stepDX * i)) + Math.cos(alpha) * (10), (y + (stepDY * i)) + Math.sin(alpha) * (10), 1, 0, Math.PI * 2);
-
-            }
-        }
-
-
-        // path.arc(x, y, 2, 0, Math.PI * 2);
-    }
-
-    #testBrush(x, y) {
-        this.#moveToPreviousPosition();
-        const path = this.currentPathProp.path;
         const tangent = calculateTangent({ x, y }, this.previousPosition);
         const normal = calculateNormal(tangent);
-
         const stepDX = tangent.ux;
         const stepDY = tangent.uy;
+        const randomNess = 1;
+        const density = 1;
+        const pebbleSize = 0.1;
 
-        for (let i = 0; i < Math.floor(radius); i++) {
-            const xs = (x + (stepDX * i)) + random(-5, 5);
-            const ys = (y + (stepDY * i)) + random(-5, 5);
-            // path.moveTo(x + (stepDX * i), (y + (stepDY * i)));
-            this.ctx.arc(xs, ys, 0.5, 0, Math.PI * 2)
-            path.arc(xs, ys, 0.5, 0, Math.PI * 2);
+        for (let i = 0; i < Math.floor(tangent.L); i++) {
+            for (let j = 0; j < density; j++) {
+                const xs = (x + (stepDX * i)) + random(-randomNess, randomNess);
+                const ys = (y + (stepDY * i)) + random(-randomNess, randomNess);
+
+                if (!this.currentPathProp.settings.fill) {
+                    path.moveTo(xs, ys);
+                }
+                this.ctx.moveTo(xs, ys);
+                this.ctx.arc(xs, ys, pebbleSize, 0, Math.PI * 2);
+                path.arc(xs, ys, pebbleSize, 0, Math.PI * 2);
+            }
         }
     }
 
-    // rebuild() {
-    //     this.path.forEach((path) => {
-    //         this.draw(path.x, path.y, path.activeMetaData, path.settings)
-    //     })
-    // }
 
     #rectangle(x, y) {
         this.#moveToInitialPosition();

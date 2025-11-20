@@ -12,6 +12,7 @@ export function calculateTangent(a, b) {
     return {
         x,
         y,
+        L,
         ux: x / L,
         uy: y / L
     }
