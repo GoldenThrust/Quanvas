@@ -1,4 +1,4 @@
-import { rootElem } from "../../shared/main.js";
+import { rootElem } from "../../../shared/domElem.js";
 
 export default class Layer {
     constructor(id, layerElem) {
@@ -34,17 +34,7 @@ export default class Layer {
         this.id = id.unique;
         this.name = id.name;
         this.isDrawing = false;
-    }
-
-    #clear() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.lctx.clearRect(0, 0, this.layerCanvas.width, this.layerCanvas.height);
-    }
-
-    receiveDrawing(canvas) {
-        this.ctx.drawImage(canvas, 0, 0, this.canvas.width, this.canvas.height);
-        this.lctx.clearRect(0, 0, this.layerCanvas.width, this.layerCanvas.height);
-        this.lctx.drawImage(this.canvas, 0, 0, this.layerCanvas.width, this.layerCanvas.height);
+        this.data = new Set();
     }
 
     drawPath(path, fill) {
@@ -56,8 +46,7 @@ export default class Layer {
         this.lctx.drawImage(this.canvas, 0, 0, this.layerCanvas.width, this.layerCanvas.height);
     }
 
-    redraw(canvas) {
-        this.#clear();
-        this.receiveDrawing(canvas);
+    addData(data) {
+        this.data.add(data);
     }
 }

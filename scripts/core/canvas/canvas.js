@@ -1,48 +1,42 @@
-import { activeMetaData, rootElem } from "../../shared/main.js";
-import settings from "../../shared/settings.js";
-import { lerp, random } from "../../utils/random.js";
-import { canvas } from "../../shared/main.js";
-import { calculateNormal, calculateTangent, getNormal } from "../../utils/vector.js";
+import { rootElem } from "../../shared/domElem.js";
+import { random } from "../../utils/random.js";
+import { calculateTangent } from "../../utils/vector.js";
+import app from "../app.js";
+import toolsManager from "../toolbox/manager.js";
+import layerManager from "./layer/manager.js";
 
-export default class Canvas {
-    constructor(canvas) {
+class Canvas {
+    constructor() {
         const { width, height } = rootElem.getBoundingClientRect();
 
         this.previousPosition = { x: 0, y: 0 };
         this.initialPosition = { x: 0, y: 0 };
 
-        this.canvas = canvas;
+        this.canvas = document.getElementById('canvas');
 
         this.ctx = this.canvas.getContext('2d');
 
         this.canvas.width = width;
         this.canvas.height = height;
 
-        this.currentPathProp = {
-            path: null,
-            settings: null,
-            metadata: false,
-            points: []
-        };
-
-        this.path = new Set();
+        this.path = null;
 
         this.isDrawing = false;
         this.flush = true;
-        this.memorizePath = [];
+        this.points = [];
         this.pointsCount = 0;
 
-        this.#eventlistener();
+        this.#addEventlistener();
     }
 
     createPath() {
-        this.currentPathProp.path = new Path2D();
+        this.path = new Path2D();
     }
 
 
-    #eventlistener() {
+    #addEventlistener() {
         this.canvas.addEventListener('mousedown', (e) => {
-            if (!['L', 'K'].includes(activeMetaData.selectedTool[0]))
+            if (!['L', 'K'].includes(toolsManager.activeToolId[0]))
                 this.#flushDrawing();
             this.createPath();
             const rect = this.canvas.getBoundingClientRect();
@@ -64,7 +58,7 @@ export default class Canvas {
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
 
-                this.draw(x, y, activeMetaData, settings);
+                this.draw(x, y);
 
                 this.previousPosition.x = x;
                 this.previousPosition.y = y;
@@ -78,18 +72,19 @@ export default class Canvas {
     #reset() {
         this.#clear();
         this.isDrawing = false;
-        this.currentPathProp = { path: null, settings: null, metadata: false, points: [] };
-        this.memorizePath = [];
+        this.path = null;
+        this.points = [];
         this.pointsCount = 0;
     }
 
     #flushDrawing(flush) {
-        if (!this.currentPathProp || !this.currentPathProp.metadata) return;
-        this.draw(this.previousPosition.x, this.previousPosition.y, activeMetaData, settings);
+        if (this.path === null) return;
+
+        this.draw(this.previousPosition.x, this.previousPosition.y);
         this.pointsCount++;
 
-        if (['K', 'L'].includes(activeMetaData.selectedTool[0]) && this.flush) {
-            this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y });
+        if (['K', 'L'].includes(toolsManager.activeToolId[0]) && this.flush) {
+            this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
             this.#createCurve();
             this.flush = false;
         }
@@ -97,24 +92,17 @@ export default class Canvas {
         if (flush !== undefined) this.flush = flush;
 
         if (this.flush) {
-            const layer = canvas.get(activeMetaData.selectedLayer);
+            layerManager.saveDrawing(this.path, this.points)
 
-            if (layer && typeof layer.drawPath === 'function') {
-                const fillFlag = !!this.currentPathProp.settings?.fill;
-                layer.drawPath(this.currentPathProp.path, fillFlag, this.currentPathProp.metadata.selectedTool);
-            }
-
-            this.currentPathProp.points = Array.from(this.memorizePath);
-            this.path.add(this.currentPathProp);
+            console.log('Path added. Total paths:', this.points.length, 'Points:', this.pointsCount);
             this.#reset()
-            console.log('Path added. Total paths:', this.path.size);
         }
 
         this.flush = true;
     }
 
     releasePath() {
-        if ((['L',].includes(activeMetaData.selectedTool[0]) && this.memorizePath.length < 2) || (['P', 'K'].includes(activeMetaData.selectedTool[0]) && this.memorizePath.length < 3)) return this.#reset();
+        if ((['L',].includes(toolsManager.activeToolId[0]) && this.points.length < 2) || (['P', 'K'].includes(toolsManager.activeToolId[0]) && this.points.length < 3)) return this.#reset();
         this.#flushDrawing(true);
     }
 
@@ -122,39 +110,33 @@ export default class Canvas {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    #moveToInitialPosition(line = false) {
+    #moveToInitialPosition() {
         this.#clear();
         this.createPath();
         this.ctx.moveTo(this.initialPosition.x, this.initialPosition.y)
-        this.currentPathProp.path.moveTo(this.initialPosition.x, this.initialPosition.y);
+        this.path.moveTo(this.initialPosition.x, this.initialPosition.y);
     }
 
     #moveToPreviousPosition() {
-        if (this.currentPathProp.settings.fill) {
+        if (app.state.fill) {
             this.ctx.lineTo(this.previousPosition.x, this.previousPosition.y);
-            this.currentPathProp.path?.lineTo?.(this.previousPosition.x, this.previousPosition.y);
+            this.path?.lineTo?.(this.previousPosition.x, this.previousPosition.y);
         } else {
             this.ctx.moveTo(this.previousPosition.x, this.previousPosition.y);
-            this.currentPathProp.path?.moveTo?.(this.previousPosition.x, this.previousPosition.y);
+            this.path?.moveTo?.(this.previousPosition.x, this.previousPosition.y);
         }
     }
 
     #createCurve() {
-        const mLen = this.memorizePath.length;
-        if (activeMetaData.selectedTool === 'K-quadratic') {
-            this.memorizePath[mLen - 1]['type'] = this.pointsCount % 2 === 1 ? 'quad' : 'point';
-        } else if (activeMetaData.selectedTool === 'K-bezier') {
-            this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y, type: 'corner' });
-            this.memorizePath.push({ x: this.previousPosition.x, y: this.previousPosition.y, type: 'corner' });
-            // const handle = this.#computeHandle(this.memorizePath?.[mLen - 6], this.memorizePath?.[mLen - 9], this.memorizePath?.[mLen - 3]);
-            // if (this.pointsCount === 3 && handle) {
-            //     const { prev, next } = handle;
-            //     this.memorizePath[mLen - 7] = prev;
-            //     this.memorizePath[mLen - 5] = next;
-            // }
+        const mLen = this.points.length;
+        if (toolsManager.activeToolId === 'K-quadratic') {
+            this.points[mLen - 1]['type'] = this.pointsCount % 2 === 1 ? 'quad' : 'point';
+        } else if (toolsManager.activeToolId === 'K-bezier') {
+            this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
+            this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
         }
 
-        console.log(this.memorizePath.length);
+        console.log(this.points.length);
     }
 
     #computeHandle(p, pPrev, pNext) {
@@ -169,37 +151,36 @@ export default class Canvas {
 
         const len = k * Math.min(lenPrev, lenNext);
 
-        return { prev: { x: p.x - ux * len, y: p.y - uy * len, type: 'corner' }, next: { x: p.x + ux * len, y: p.y + uy * len, type: 'corner' } };
+        return { prev: { x: p.x - ux * len, y: p.y - uy * len }, next: { x: p.x + ux * len, y: p.y + uy * len } };
     }
 
     #drawline() {
         this.#clear();
         this.createPath()
-        if (this.memorizePath.length) {
-            this.ctx.moveTo(this.memorizePath[0].x, this.memorizePath[0].y);
-            this.currentPathProp.path.moveTo(this.memorizePath[0].x, this.memorizePath[0].y);
+        if (this.points.length) {
+            this.ctx.moveTo(this.points[0].x, this.points[0].y);
+            this.path.moveTo(this.points[0].x, this.points[0].y);
         } else {
-            this.memorizePath.push({ x: this.initialPosition.x, y: this.initialPosition.y })
+            this.points.push({ x: this.initialPosition.x, y: this.initialPosition.y })
             this.#createCurve();
             this.#moveToInitialPosition();
         }
     }
 
-    draw(x, y, activeMetaData, settings) {
-        // console.clear();
-        this.currentPathProp.metadata = activeMetaData;
-        this.currentPathProp.settings = settings;
+    draw(x, y) {
+        const state = app.state;
+        const activeTool = toolsManager.activeToolId;
 
-        const drawGPath = ['P', 'L', 'K'].includes(activeMetaData.selectedTool[0]);
+        const drawGPath = ['P', 'L', 'K'].includes(activeTool[0]);
         if (drawGPath)
             this.ctx.beginPath();
-        if (!settings.erase) {
-            switch (activeMetaData.selectedTool) {
+        if (!state.erase) {
+            switch (activeTool) {
                 case 'P-pen':
                     this.#pen(x, y);
                     break;
-                case 'P-brush':
-                    this.#brush(x, y);
+                case 'P-chalk':
+                    this.#chalk(x, y);
                     break;
                 case 'R-rectangle':
                     this.#rectangle(x, y);
@@ -234,34 +215,34 @@ export default class Canvas {
             // this.ctx.strokeStyle = 'yellow';
 
 
-            if (settings.fill && !drawGPath) {
-                this.ctx.fill(this.currentPathProp.path);
+            if (state.fill && !drawGPath) {
+                this.ctx.fill(this.path);
             }
             if (drawGPath)
                 this.ctx.stroke();
             else
-                this.ctx.stroke(this.currentPathProp.path);
+                this.ctx.stroke(this.path);
 
-            if (activeMetaData.selectedTool[0] === 'P') {
-                this.memorizePath.push({ x, y });
+            if (activeTool[0] === 'P') {
+                this.points.push({ x, y });
             }
         } else {
             this.#eraser(x, y);
-            this.memorizePath.push({ x, y });
+            this.points.push({ x, y });
         }
     }
 
     #pen(x, y) {
         this.#moveToPreviousPosition();
         this.ctx.lineTo(x, y);
-        this.currentPathProp.path.lineTo(x, y);
+        this.path.lineTo(x, y);
     }
 
-    #brush(x, y) {
+    #chalk(x, y) {
         this.#moveToPreviousPosition();
-        const path = this.currentPathProp.path;
+        const path = this.path;
         const tangent = calculateTangent({ x, y }, this.previousPosition);
-        const normal = calculateNormal(tangent);
+        // const normal = calculateNormal(tangent);
         const stepDX = tangent.ux;
         const stepDY = tangent.uy;
         const randomNess = 1;
@@ -273,7 +254,7 @@ export default class Canvas {
                 const xs = (x + (stepDX * i)) + random(-randomNess, randomNess);
                 const ys = (y + (stepDY * i)) + random(-randomNess, randomNess);
 
-                if (!this.currentPathProp.settings.fill) {
+                if (!app.state.fill) {
                     path.moveTo(xs, ys);
                 }
                 this.ctx.moveTo(xs, ys);
@@ -286,21 +267,19 @@ export default class Canvas {
 
     #rectangle(x, y) {
         this.#moveToInitialPosition();
-        const path = this.currentPathProp.path;
-        path.rect(this.initialPosition.x, this.initialPosition.y, x - this.initialPosition.x, y - this.initialPosition.y);
+        this.path.rect(this.initialPosition.x, this.initialPosition.y, x - this.initialPosition.x, y - this.initialPosition.y);
     }
 
     #roundRectangle(x, y) {
         this.#moveToInitialPosition();
-        const path = this.currentPathProp.path;
-        path.roundRect(this.initialPosition.x, this.initialPosition.y, x - this.initialPosition.x, y - this.initialPosition.y, 10);
+        this.path.roundRect(this.initialPosition.x, this.initialPosition.y, x - this.initialPosition.x, y - this.initialPosition.y, 10);
     }
 
     #circle(x, y) {
         this.#clear();
         this.createPath()
         const radius = Math.hypot(x - this.initialPosition.x, y - this.initialPosition.y);
-        this.currentPathProp.path?.arc?.(this.initialPosition.x, this.initialPosition.y, radius, 0, Math.PI * 2);
+        this.path?.arc?.(this.initialPosition.x, this.initialPosition.y, radius, 0, Math.PI * 2);
     }
     #ellipse(x, y) {
         this.#clear();
@@ -308,60 +287,60 @@ export default class Canvas {
         const radiusX = Math.abs(x - this.initialPosition.x);
         const radiusY = Math.abs(y - this.initialPosition.y);
         // const rotation = Math.atan2(y - this.initialPosition.y, x - this.initialPosition.x);
-        this.currentPathProp.path?.ellipse?.(this.initialPosition.x, this.initialPosition.y, radiusX, radiusY, 0, 0, Math.PI * 2);
+        this.path?.ellipse?.(this.initialPosition.x, this.initialPosition.y, radiusX, radiusY, 0, 0, Math.PI * 2);
     }
 
     #line(x, y) {
         this.#drawline();
-        this.memorizePath.forEach(({ x, y }) => {
+        this.points.forEach(({ x, y }) => {
             this.ctx.lineTo(x, y);
-            this.currentPathProp.path?.lineTo?.(x, y);
+            this.path?.lineTo?.(x, y);
         })
         this.ctx.lineTo(x, y);
-        // this.currentPathProp.path.lineTo(x, y);
+        // this.path.lineTo(x, y);
     }
 
     #arcTo(x, y) {
         this.#drawline();
-        const path = [...this.memorizePath, { x, y }];
-        const count = path.length - 1;
+        const points = [...this.points, { x, y }];
+        const count = points.length - 1;
         for (let i = 1; i < count; i++) {
-            const p = path[i - 1];
-            const cp = path[i];
-            const p2 = path[i + 1];
+            const p = points[i - 1];
+            const cp = points[i];
+            const p2 = points[i + 1];
             const radius = Math.hypot(p.x - cp.x, p.y - cp.y) / 4;
             this.ctx.arcTo(cp.x, cp.y, p2.x, p2.y, radius);
-            this.currentPathProp.path?.arcTo?.(cp.x, cp.y, p2.x, p2.y, radius);
+            this.path?.arcTo?.(cp.x, cp.y, p2.x, p2.y, radius);
 
         }
 
         this.ctx.lineTo(x, y);
-        // this.currentPathProp.path?.lineTo?.(x, y);
+        // this.path?.lineTo?.(x, y);
     }
 
     #bezier(x, y) {
         console.clear();
         this.#drawline();
-        const count = this.memorizePath.length;
-        this.memorizePath[count - 1] = { x, y, type: 'corner' }
+        const count = this.points.length;
+        this.points[count - 1] = { x, y }
 
-        const handle = this.#computeHandle(this.memorizePath?.[count - 3], this.memorizePath?.[count - 6], { x, y });
+        const handle = this.#computeHandle(this.points?.[count - 3], this.points?.[count - 6], { x, y });
 
         if (handle) {
             const { prev, next } = handle;
             console.log('handle')
-            this.memorizePath[count - 4] = prev;
-            this.memorizePath[count - 2] = next;
+            this.points[count - 4] = prev;
+            this.points[count - 2] = next;
         }
 
-        const path = this.memorizePath;
+        const path = this.points;
 
         for (let i = 1; i < count - 2; i += 3) {
             const cp1 = path[i];
             const cp2 = path[i + 1];
             const p = path[i + 2];
             this.ctx.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
-            this.currentPathProp.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
+            this.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
             // this.ctx.circle(cp1.x, cp1.y - 10, 'red', `${i} C1 ${Math.round(cp1.x)} ${Math.round(cp1.y)}`);
             // this.ctx.circle(cp2.x, cp2.y - 20, 'green', `${i} C2 ${Math.round(cp2.x)} ${Math.round(cp2.y)}`);
             // this.ctx.circle(p.x, p.y, 'blue', `${i} P ${Math.round(p.x)} ${Math.round(p.y)}`);
@@ -377,13 +356,13 @@ export default class Canvas {
 
     #quadratic(x, y) {
         this.#drawline();
-        const path = this.memorizePath;
+        const path = this.points;
         const count = path.length - 1;
         for (let i = 1; i < count; i += 2) {
             const p = path[i + 1];
             const cp = path[i];
             this.ctx.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
-            this.currentPathProp.path?.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
+            this.path?.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
             this.ctx.circle(p.x, p.y, p.cp ? 'purple' : 'maroon')
         }
 
@@ -392,7 +371,7 @@ export default class Canvas {
 
 
     #eraser(x, y) {
-        const layer = canvas.get(activeMetaData.selectedLayer);
+        const layer = layerManager.getActiveLayer();
         const dX = this.previousPosition.x - x;
         const dY = this.previousPosition.y - y;
         const radius = Math.hypot(dX, dY);
@@ -410,3 +389,7 @@ export default class Canvas {
         }
     }
 }
+
+const canvas = new Canvas();
+
+export default canvas;

@@ -27,10 +27,12 @@ export default class Database {
                     }
                 });
             })
+
             request.addEventListener("success", e => {
                 this.db = e.target.result;
                 resolve(this.db);
             })
+
             request.addEventListener("error", e => {
                 reject(e.target.error);
             })
@@ -122,3 +124,7 @@ export default class Database {
         })
     }
 }
+
+
+const database = new Database('quanvas-db-v1', '1');
+const store = database.open()

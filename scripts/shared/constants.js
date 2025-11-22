@@ -11,7 +11,7 @@ export const TOOL_IDS = [
 ];
 
 export const TOOLS_MENU = {
-    'P': ['P-pen', 'P-brush'],
+    'P': ['P-pen', 'P-chalk'],
     'R': ['R-rectangle', 'R-roundrectangle'],
     'C': ['C-circle', 'C-ellipse'],
     'L': ['L-line', 'L-arcto'],

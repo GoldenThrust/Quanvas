@@ -54,7 +54,7 @@ main {
 #canvas {
   z-index: 1;
   /* opacity: 1; */
-  color: magenta;
+  /* color: #8989891a; */
 }
 
 #root {
@@ -91,7 +91,7 @@ main {
   display: none;
 }
 
-#special {
+#state {
   display: flex;
   flex-direction: row;
   justify-content: right;
@@ -101,7 +101,7 @@ main {
   padding: 10px;
 }
 
-#special > img {
+#state > img {
   width: 20px;
   height: 20px;
   padding: 2px;
