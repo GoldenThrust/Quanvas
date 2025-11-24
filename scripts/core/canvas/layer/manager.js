@@ -80,6 +80,7 @@ class LayerManager {
     }
 
     saveDrawing(path, points) {
+        console.clear();
         const layer = this.getActiveLayer();
 
         const data = Serializer.serialize({
@@ -92,6 +93,9 @@ class LayerManager {
         layer.drawPath(path, app.state.fill);
 
         layer.addData(data);
+
+        console.table(points)
+        console.log('Total points:', points.length);
     }
 
     setActiveLayer(id) {

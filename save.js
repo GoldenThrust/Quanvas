@@ -29,8 +29,17 @@ class Canvas {
         this.#addEventlistener();
     }
 
-    createPath() {
+    createPath(debug) {
         this.path = new Path2D();
+        if (debug)
+            console.info(debug);
+    }
+
+    addPoints(coord, debug) {
+        this.points.push(coord.x, coord.y);
+
+        if (debug)
+            console.info(`Add Points in ${debug}`);
     }
 
 
@@ -84,7 +93,7 @@ class Canvas {
         this.pointsCount++;
 
         if (['K', 'L'].includes(toolsManager.activeToolId[0]) && this.flush) {
-            this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
+            this.addPoints(this.previousPosition, 'K - L Flush');
             this.#createCurve();
             this.flush = false;
         }
@@ -92,10 +101,13 @@ class Canvas {
         if (flush !== undefined) this.flush = flush;
 
         if (this.flush) {
-            if (['R', 'C'].includes(toolsManager.activeToolId[0])) this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
-
+            if (['R', 'C'].includes(toolsManager.activeToolId[0])) {
+                this.addPoints(this.previousPosition, 'R - C Flush');
+            }
             layerManager.saveDrawing(this.path, this.points)
 
+            console.table(this.points)
+            console.log('Path added. Total paths:', this.points.length, 'Points:', this.pointsCount);
             this.#reset()
         }
 
@@ -112,15 +124,16 @@ class Canvas {
     }
 
     #moveToInitialPosition() {
-        if (!this.points.length) this.points.push({ x: this.initialPosition.x, y: this.initialPosition.y });
         this.#clear();
         this.createPath();
         this.ctx.moveTo(this.initialPosition.x, this.initialPosition.y)
         this.path.moveTo(this.initialPosition.x, this.initialPosition.y);
+        if (this.points.length === 0)
+            this.addPoints(this.initialPosition, 'Move TO Initial');
     }
 
     #moveToPreviousPosition() {
-        if (app.state.fill || app.state.clip) {
+        if (app.state.fill) {
             this.ctx.lineTo(this.previousPosition.x, this.previousPosition.y);
             this.path?.lineTo?.(this.previousPosition.x, this.previousPosition.y);
         } else {
@@ -131,8 +144,8 @@ class Canvas {
 
     #createCurve() {
         if (toolsManager.activeToolId === 'K-bezier') {
-            this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
-            this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
+            this.addPoints(this.previousPosition, 'K-Bezier');
+            this.addPoints(this.previousPosition, 'K-Bezier 2');
         }
 
         console.log(this.points.length);
@@ -157,11 +170,11 @@ class Canvas {
         this.#clear();
         this.createPath()
         if (this.points.length) {
-            this.ctx.moveTo(this.points[0].x, this.points[0].y);
-            this.path.moveTo(this.points[0].x, this.points[0].y);
+            this.ctx.moveTo(this.points[0], this.points[1]);
+            this.path.moveTo(this.points[0], this.points[1]);
         } else {
-            this.#createCurve();
             this.#moveToInitialPosition();
+            this.#createCurve();
         }
     }
 
@@ -213,7 +226,6 @@ class Canvas {
             // this.ctx.strokeStyle = 'yellow';
 
 
-
             if (state.fill && !drawGPath) {
                 this.ctx.fill(this.path);
             }
@@ -223,15 +235,11 @@ class Canvas {
                 this.ctx.stroke(this.path);
 
             if (activeTool[0] === 'P') {
-                this.points.push({ x, y });
+                this.addPoints({ x, y }, 'Pen');
             }
-
-            // if (state.clip) {
-            //     this.ctx.clip(this.path);
-            // }
         } else {
             this.#eraser(x, y);
-            this.points.push({ x, y });
+            this.addPoints({ x, y }, 'eraser');
         }
     }
 
@@ -280,40 +288,49 @@ class Canvas {
 
     #circle(x, y) {
         this.#clear();
-        this.createPath()
+        this.createPath();
+        if (this.points.length === 0)
+            this.addPoints(this.initialPosition, 'Move To Initial circle');
         const radius = Math.hypot(x - this.initialPosition.x, y - this.initialPosition.y);
         this.path?.arc?.(this.initialPosition.x, this.initialPosition.y, radius, 0, Math.PI * 2);
-        if (!this.points.length) this.points.push({ x: this.initialPosition.x, y: this.initialPosition.y });
     }
+
     #ellipse(x, y) {
         this.#clear();
-        this.createPath()
+        this.createPath();
+        if (this.points.length === 0)
+            this.addPoints(this.initialPosition, 'Move To Initial Ellipse');
         const radiusX = Math.abs(x - this.initialPosition.x);
         const radiusY = Math.abs(y - this.initialPosition.y);
         // const rotation = Math.atan2(y - this.initialPosition.y, x - this.initialPosition.x);
         this.path?.ellipse?.(this.initialPosition.x, this.initialPosition.y, radiusX, radiusY, 0, 0, Math.PI * 2);
-        if (!this.points.length) this.points.push({ x: this.initialPosition.x, y: this.initialPosition.y });
     }
 
     #line(x, y) {
         this.#drawline();
-        this.points.forEach(({ x, y }) => {
+
+        for (let i = 0; i < this.points.length; i += 2) {
+            const x = this.points[i];
+            const y = this.points[i + 1];
+
             this.ctx.lineTo(x, y);
             this.path?.lineTo?.(x, y);
-        })
+        }
+
         this.ctx.lineTo(x, y);
-        // this.path.lineTo(x, y);
     }
 
     #arcTo(x, y) {
         this.#drawline();
-        const points = [...this.points, { x, y }];
-        const count = points.length - 1;
-        for (let i = 1; i < count; i++) {
-            const p = points[i - 1];
-            const cp = points[i];
-            const p2 = points[i + 1];
+
+        const count = this.points.length;
+        for (let i = 2; i < count; i += 2) {
+            const p = { x: this.points[i - 2], y: this.points[i - 1] };
+            const cp = { x: this.points[i], y: this.points[i + 1] };
+            const p2 = { x: this.points[i + 2], y: this.points[i + 3] };
+
             const radius = Math.hypot(p.x - cp.x, p.y - cp.y) / 4;
+
             this.ctx.arcTo(cp.x, cp.y, p2.x, p2.y, radius);
             this.path?.arcTo?.(cp.x, cp.y, p2.x, p2.y, radius);
 
@@ -327,51 +344,53 @@ class Canvas {
         console.clear();
         this.#drawline();
         const count = this.points.length;
-        this.points[count - 1] = { x, y }
+        this.points[count - 2] = x;
+        this.points[count - 1] = y;
 
-        const handle = this.#computeHandle(this.points?.[count - 3], this.points?.[count - 6], { x, y });
+        const handle = this.#computeHandle({ x: this.points?.[count - 4], y: this.points?.[count - 3] }, { x: this.points?.[count - 7], y: this.points?.[count - 6] }, { x, y });
 
         if (handle) {
             const { prev, next } = handle;
             console.log('handle')
-            this.points[count - 4] = prev;
-            this.points[count - 2] = next;
+            this.points[count - 5] = prev.x;
+            this.points[count - 4] = prev.y;
+            this.points[count - 3] = next.x;
+            this.points[count - 2] = next.y;
         }
 
         const path = this.points;
 
-        for (let i = 1; i < count - 2; i += 3) {
-            const cp1 = path[i];
-            const cp2 = path[i + 1];
-            const p = path[i + 2];
+        for (let i = 2; i < count - 2; i += 3) {
+            const cp1 = { x: path[i - 1], y: this.points[i] };
+            const cp2 = { x: path[i + 1], y: path[i + 2] };
+            const p = { x: path[i + 3], y: path[i + 4] };
             this.ctx.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
             this.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
-            // this.ctx.circle(cp1.x, cp1.y - 10, 'red', `${i} C1 ${Math.round(cp1.x)} ${Math.round(cp1.y)}`);
-            // this.ctx.circle(cp2.x, cp2.y - 20, 'green', `${i} C2 ${Math.round(cp2.x)} ${Math.round(cp2.y)}`);
-            // this.ctx.circle(p.x, p.y, 'blue', `${i} P ${Math.round(p.x)} ${Math.round(p.y)}`);
+            this.ctx.circle(cp1.x, cp1.y - 10, 'red', `${i} C1 ${Math.round(cp1.x)} ${Math.round(cp1.y)}`);
+            this.ctx.circle(cp2.x, cp2.y - 20, 'green', `${i} C2 ${Math.round(cp2.x)} ${Math.round(cp2.y)}`);
+            this.ctx.circle(p.x, p.y, 'blue', `${i} P ${Math.round(p.x)} ${Math.round(p.y)}`);
         }
 
         this.ctx.bezierCurveTo?.(path[count - 2].x, path[count - 2].y, path[count - 1].x, path[count - 1].y, x, y);
 
-        // this.ctx.circle(path[0].x, path[0].y, 'black', `P ${Math.round(path[0].x)} ${Math.round(path[0].y)}`);
-        // this.ctx.circle(path[count - 2].x, path[count - 2].y - 10, 'cyan', `C1 ${Math.round(path[count - 2].x)} ${Math.round(path[count - 2].y)}`);
-        // this.ctx.circle(path[count - 1].x, path[count - 1].y - 20, 'magenta', `C2 ${Math.round(path[count - 1].x)} ${Math.round(path[count - 1].y)}`);
-        // this.ctx.circle(x, y, 'yellow', `P ${Math.round(x)} ${Math.round(y)}`);
+        this.ctx.circle(path[0].x, path[0].y, 'black', `P ${Math.round(path[0].x)} ${Math.round(path[0].y)}`);
+        this.ctx.circle(path[count - 2].x, path[count - 2].y - 10, 'cyan', `C1 ${Math.round(path[count - 2].x)} ${Math.round(path[count - 2].y)}`);
+        this.ctx.circle(path[count - 1].x, path[count - 1].y - 20, 'magenta', `C2 ${Math.round(path[count - 1].x)} ${Math.round(path[count - 1].y)}`);
+        this.ctx.circle(x, y, 'yellow', `P ${Math.round(x)} ${Math.round(y)}`);
     }
 
     #quadratic(x, y) {
         this.#drawline();
-        const path = this.points;
-        const count = path.length - 1;
-        for (let i = 1; i < count; i += 2) {
-            const p = path[i + 1];
-            const cp = path[i];
+        const count = this.points.length;
+        for (let i = 2; i < count; i += 4) {
+            const cp = { x: this.points[i], y: this.points[i + 1] };
+            const p = { x: this.points[i + 2], y: this.points[i + 3] };
             this.ctx.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
             this.path?.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
             this.ctx.circle(p.x, p.y, p.cp ? 'purple' : 'maroon')
         }
 
-        this.ctx.quadraticCurveTo?.(path[count].x, path[count].y, x, y);
+        this.ctx.quadraticCurveTo?.(this.points[count - 2], this.points[count - 1], x, y);
     }
 
 

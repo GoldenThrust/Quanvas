@@ -1,4 +1,5 @@
 import { rootElem } from "../../../shared/domElem.js";
+import app from "../../app.js";
 
 export default class Layer {
     constructor(id, layerElem) {
@@ -38,10 +39,16 @@ export default class Layer {
     }
 
     drawPath(path, fill) {
-        if (fill) {
-            this.ctx.fill(path);
+        if (app.state.clip) {
+            this.ctx.clip(path);
+            if (!fill) this.ctx.stroke(path);
+        } else {
+            if (fill) {
+                this.ctx.fill(path);
+            }
+            this.ctx.stroke(path);
         }
-        this.ctx.stroke(path);
+
         this.lctx.clearRect(0, 0, this.layerCanvas.width, this.layerCanvas.height);
         this.lctx.drawImage(this.canvas, 0, 0, this.layerCanvas.width, this.layerCanvas.height);
     }

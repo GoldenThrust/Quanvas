@@ -32,6 +32,7 @@ class APPManager {
             'shift+k': () => toolsManager.selectTool('K-bezier'),
             'e': () => this.toggleState('erase'),
             'f': () => this.toggleState('fill'),
+            'ctrl+shift+c': () => this.toggleState('clip'),
             'escape': () => canvas.releasePath(),
         }
 
