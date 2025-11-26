@@ -13,6 +13,9 @@
 
 <body>
     <header>
+        <div id="menu">
+            <img src="./images/icons/menu.svg" class="btn-icon">
+        </div>
         <div id="state">
             <img src="./images/tools/stroke.svg" id="fill" alt="Fill or Stroke Path" title="fill or stroke">
             <img src="./images/tools/eraser.svg" id="erase" alt="Erase" title="Eraser">
@@ -20,6 +23,45 @@
         </div>
     </header>
     <main>
+        <div id="homePage">
+            <div id="createProjects">
+                <h3>Create New Project</h3>
+                <form id="projectForm">
+                    <div class="form-group">
+                        <label for="projectName">Project Name:</label>
+                        <input type="text" id="projectName" name="projectName" placeholder="Enter project name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectWidth">Width (px):</label>
+                        <input type="number" id="projectWidth" name="projectWidth" placeholder="1920" min="100" value="1920">
+                    </div>
+                    <div class="form-group">
+                        <label for="projectHeight">Height (px):</label>
+                        <input type="number" id="projectHeight" name="projectHeight" placeholder="1080" min="100" value="1080">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-create">
+                            <img src="./images/icons/create.svg" alt="Create" class="btn-icon">
+                            Create Project
+                        </button>
+                        <button type="button" id="cancelCreate" class="btn-cancel">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="projectsContainer">
+                <div class="projects-header">
+                    <h2>Your Projects</h2>
+                    <button id="newProjectBtn" class="btn-new-project" title="Create New Project">
+                        <img src="./images/icons/create.svg" alt="Create New Project" class="btn-icon">
+                        New Project
+                    </button>
+                </div>
+                <div id="projects">
+                    
+                </div>
+            </div>
+        </div>
         <aside id="toolsmenu">
             <div id="P">
                 <img src="./images/tools/P-chalk.svg" id="P-chalk" alt="pen">
@@ -31,7 +73,7 @@
                 <img src="./images/tools/C-ellipse.svg" id="C-ellipse" alt="Ellipse">
             </div>
             <div id="L">
-                <img src="./images/tools/L-arcto.svg" id="L-arcto" alt="Arc To" >
+                <img src="./images/tools/L-arcto.svg" id="L-arcto" alt="Arc To">
             </div>
             <div id="K">
                 <img src="./images/tools/K-bezier.svg" id="K-bezier" alt="bezier">

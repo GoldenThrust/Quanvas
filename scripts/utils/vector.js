@@ -28,3 +28,7 @@ export function calculateNormal(tangent) {
         uy: Tux
     }
 }
+
+export function lerp(a, b, t) {
+    return a + (b - a) * t;
+}

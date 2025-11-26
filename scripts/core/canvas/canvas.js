@@ -1,3 +1,4 @@
+import { CANVAS_PROP } from "../../shared/constants.js";
 import { rootElem } from "../../shared/domElem.js";
 import { random } from "../../utils/random.js";
 import { calculateTangent } from "../../utils/vector.js";
@@ -5,10 +6,8 @@ import app from "../app.js";
 import toolsManager from "../toolbox/manager.js";
 import layerManager from "./layer/manager.js";
 
-class Canvas {
+export default class Canvas {
     constructor() {
-        const { width, height } = rootElem.getBoundingClientRect();
-
         this.previousPosition = { x: 0, y: 0 };
         this.initialPosition = { x: 0, y: 0 };
 
@@ -16,8 +15,8 @@ class Canvas {
 
         this.ctx = this.canvas.getContext('2d');
 
-        this.canvas.width = width;
-        this.canvas.height = height;
+        this.canvas.width = CANVAS_PROP.width;
+        this.canvas.height = CANVAS_PROP.height;
 
         this.path = null;
 
@@ -393,8 +392,21 @@ class Canvas {
             layer?.ctx?.clearRect?.(xs, ys, 5, 5);
         }
     }
+
+    static createCanvas(width, height) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
+    }
+
+    static createPreviewCanvas(canvas) {
+        return new Promise((resolve) => {
+            canvas.toBlob(blob => {
+                resolve(blob);
+            })
+        });
+    }
 }
 
-const canvas = new Canvas();
-
-export default canvas;
+export const canvas = new Canvas();

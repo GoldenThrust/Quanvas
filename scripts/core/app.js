@@ -1,5 +1,8 @@
-import { TOOL_IDS } from "../shared/constants.js";
+import { CANVAS_PROP, TOOL_IDS } from "../shared/constants.js";
 import canvas from "./canvas/canvas.js";
+import layerManager from "./canvas/layer/manager.js";
+import Database, { dbOperations } from "./memory/database.js";
+import { project } from "./projects.js";
 import toolsManager from "./toolbox/manager.js";
 
 const stateMenuElem = document.getElementById('state');
@@ -18,7 +21,7 @@ class APPManager {
         this.#addEventListener();
     }
 
-    initDefaultKeyBind() {
+    async init() {
         const defaultKeyBind = {
             'p': () => toolsManager.selectTool('P-pen'),
             'shift+p': () => toolsManager.selectTool('P-chalk'),
@@ -35,10 +38,34 @@ class APPManager {
             'ctrl+shift+c': () => this.toggleState('clip'),
             'escape': () => canvas.releasePath(),
         }
+        await project.init();
 
         Object.entries(defaultKeyBind).forEach(([id, cb]) => {
             this.addKeyBind(id, cb);
         })
+
+        toolsManager.selectTool('P-pen');
+
+        const projectId = Database.getCurrentProjectID();
+        if (!projectId) return;
+        const projectData = await dbOperations.getProject(projectId);
+        if (!projectData) {
+            await dbOperations.deleteProject(projectId);
+            return
+        };
+
+        layerManager.project = projectData;
+        CANVAS_PROP.width = projectData.width;
+        CANVAS_PROP.height = projectData.height;
+
+        const layers = (await dbOperations.getLayersByProject(projectId)).sort((a, b) => a.order - b.order);
+
+        layers?.forEach((layer) => {
+            layerManager.createLayer(layer.id, layer.name, layer.order);
+        });
+        if (layerManager.layers.size === 0) {
+            layerManager.createLayer();
+        }
     }
 
 
@@ -49,7 +76,7 @@ class APPManager {
         })
 
         addEventListener('keydown', (e) => {
-            e.preventDefault();
+            // e.preventDefault();
             let keyBind = '';
 
             if (e.ctrlKey) keyBind += 'ctrl+';

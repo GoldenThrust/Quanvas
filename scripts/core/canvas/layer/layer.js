@@ -1,41 +1,64 @@
+import { CANVAS_PROP } from "../../../shared/constants.js";
 import { rootElem } from "../../../shared/domElem.js";
 import app from "../../app.js";
+import { dbOperations } from "../../memory/database.js";
 
 export default class Layer {
-    constructor(id, layerElem) {
-        const { width, height } = rootElem.getBoundingClientRect();
+    constructor(id, name, order, layerElem) {
         const { width: lWidth, height: lHeight } = layerElem.getBoundingClientRect();
 
         this.previousPosition = { x: 0, y: 0 };
         this.initialPosition = { x: 0, y: 0 };
 
+        this.id = id;
+        this.name = name;
+        this.isDrawing = false;
+        this.data = new Set();
+
         this.canvas = document.createElement('canvas');
 
         this.layerCanvas = this.canvas.cloneNode();
-        this.canvas.dataset.id = id.unique;
+        this.canvas.dataset.id = id;
+        this.layerCanvas.style.zIndex = order;
+        this.layerCanvas.dataset.id = id;
+
 
         rootElem.appendChild(this.canvas);
-        layerElem.appendChild(this.layerCanvas);
 
         this.layer = layerElem;
 
         this.ctx = this.canvas.getContext('2d');
         this.lctx = this.layerCanvas.getContext('2d');
 
-
-        this.canvas.width = width;
-        this.canvas.height = height;
+        this.canvas.width = CANVAS_PROP.width;
+        this.canvas.height = CANVAS_PROP.height;
         this.layerCanvas.width = lWidth;
         this.layerCanvas.height = lHeight;
 
-        const span = document.createElement('span');
-        span.innerText = `Layer ${id.name}`;
+        this.nameElem = document.createElement('span');
+        this.nameElem.contentEditable = true;
+        this.nameElem.classList.add('layer-name');
+        this.nameElem.innerText = this.name;
+        this.nameElem.style.zIndex = 1;
 
-        layerElem.appendChild(span);
-        this.id = id.unique;
-        this.name = id.name;
-        this.isDrawing = false;
-        this.data = new Set();
+
+        layerElem.appendChild(this.nameElem);
+        layerElem.appendChild(this.layerCanvas);
+        this.#addEventListener();
+    }
+
+    #addEventListener() {
+        this.nameElem.addEventListener('blur', () => {
+            this.name = this.nameElem.innerText ?? 'Unnamed';
+            app.layerManager.renameLayer(this.id, this.name);
+        });
+
+        this.nameElem.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.nameElem.blur();
+            }
+        });
     }
 
     drawPath(path, fill) {
@@ -53,7 +76,16 @@ export default class Layer {
         this.lctx.drawImage(this.canvas, 0, 0, this.layerCanvas.width, this.layerCanvas.height);
     }
 
-    addData(data) {
+    addData(path, data) {
+        data['path'] = path;
         this.data.add(data);
+    }
+
+    setName(id, name) {
+        this.name = name;
+        this.nameElem.innerText = this.name;
+        dbOperations.updateLayer(id, {
+            name
+        })
     }
 }

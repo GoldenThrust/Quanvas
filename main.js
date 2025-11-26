@@ -1,6 +1,9 @@
 import toolsManager from "./scripts/core/toolbox/manager.js";
 import layerManager from "./scripts/core/canvas/layer/manager.js";
 import app from "./scripts/core/app.js";
+import { v4 as uuid } from "uuid";
+import { dbOperations } from "./scripts/core/memory/database.js";
+import Canvas from "./scripts/core/canvas/canvas.js";
 
 
 if ("serviceWorker" in navigator) {
@@ -48,11 +51,11 @@ CanvasRenderingContext2D.prototype.mark = function (x, y, text, color = 'yellow'
 }
 
 // Prevent right-click context menu
-// window.addEventListener("contextmenu", function (e) {
+// window.addEventListener("contextmenu", (e) => {
 //     e.preventDefault();
 // }, false);
 
-toolsManager.selectTool('P-pen');
-layerManager.createLayer();
-app.initDefaultKeyBind();
-// Keybinding
+
+
+app.init();
+

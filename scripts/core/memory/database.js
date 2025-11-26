@@ -96,6 +96,20 @@ export default class Database {
         })
     }
 
+    async getAllByIndex(storeName, indexName, indexValue) {
+        return new Promise((resolve, reject) => {
+            const tx = this.db.transaction(storeName, "readonly");
+            const index = tx.objectStore(storeName).index(indexName);
+            const request = index.getAll(indexValue);
+            request.addEventListener("success", e => {
+                resolve(e.target.result);
+            })
+            request.addEventListener("error", e => {
+                reject(e.target.error);
+            })
+        })
+    }
+
     async delete(storeName, key) {
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(storeName, "readwrite");
@@ -123,8 +137,188 @@ export default class Database {
             })
         })
     }
+
+    getProject() {
+        const projectId = Database.getCurrentProjectID();
+        return this.get('projects', projectId);
+    }
+
+    static getCurrentProjectID() {
+        return localStorage.getItem('current-project');
+    }
 }
 
 
-const database = new Database('quanvas-db-v1', '1');
-const store = database.open()
+const database = new Database('quanvas-db-v1', 1);
+
+
+const storeDefinitions = [
+    {
+        name: 'projects',
+        keyPath: 'id',
+        indexes: [
+            { name: 'name', keyPath: 'name', unique: false },
+            { name: 'createdAt', keyPath: 'createdAt', unique: false },
+            { name: 'updatedAt', keyPath: 'updatedAt', unique: false }
+        ]
+    },
+    {
+        name: 'layers',
+        keyPath: 'id',
+        indexes: [
+            { name: 'projectId', keyPath: 'projectId', unique: false },
+            { name: 'name', keyPath: 'name', unique: false },
+            { name: 'order', keyPath: 'order', unique: false },
+        ]
+    },
+    {
+        name: 'paths',
+        keyPath: 'id',
+        autoIncrement: true,
+        indexes: [
+            { name: 'layerId', keyPath: 'layerId', unique: false },
+            { name: 'projectId', keyPath: 'projectId', unique: false },
+            { name: 'type', keyPath: 'type', unique: false },
+            { name: 'createdAt', keyPath: 'createdAt', unique: false }
+        ]
+    }
+];
+
+try {
+    await database.open(storeDefinitions);
+    console.log('Database initialized successfully');
+} catch (error) {
+    console.error('Failed to initialize database:', error);
+    throw error;
+}
+
+export { database };
+
+export const dbOperations = {
+    async createProject(projectData) {
+        const project = {
+            ...projectData,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        return await database.put('projects', project);
+    },
+
+    async getProject(projectId) {
+        return await database.get('projects', projectId);
+    },
+
+    async getAllProjects() {
+        return await database.getAll('projects');
+    },
+
+    async updateProject(projectId, updateData) {
+        const project = await database.get('projects', projectId);
+        if (project) {
+            const updatedProject = {
+                ...project,
+                ...updateData,
+                updatedAt: new Date().toISOString()
+            };
+            return await database.put('projects', updatedProject);
+        }
+        return false;
+    },
+
+    async deleteProject(projectId) {
+        localStorage.removeItem('current-project');
+        const layers = await database.getByIndex('layers', 'projectId', projectId);
+        if (layers) {
+            await database.delete('layers', layers.id);
+        }
+
+        const paths = await database.getByIndex('paths', 'projectId', projectId);
+        if (paths) {
+            await database.delete('paths', paths.id);
+        }
+
+        return await database.delete('projects', projectId);
+    },
+
+    async createLayer(layerData) {
+        const layer = {
+            ...layerData,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        return await database.put('layers', layer);
+    },
+
+    async getLayer(layerId) {
+        return await database.get('layers', layerId);
+    },
+
+    async getAllLayers() {
+        return await database.getAll('layers');
+    },
+
+    async getLayersByProject(projectId) {
+        return await database.getAllByIndex('layers', 'projectId', projectId);
+    },
+
+    async updateLayer(layerId, updateData) {
+        const layer = await database.get('layers', layerId);
+        if (layer) {
+            const updatedLayer = {
+                ...layer,
+                ...updateData,
+                updatedAt: new Date().toISOString()
+            };
+            return await database.put('layers', updatedLayer);
+        }
+        return false;
+    },
+
+    async deleteLayer(layerId) {
+        const paths = await database.getByIndex('paths', 'layerId', layerId);
+        if (paths) {
+            await database.delete('paths', paths.id);
+        }
+
+        return await database.delete('layers', layerId);
+    },
+
+    async createPath(pathData) {
+        const path = {
+            ...pathData,
+            createdAt: new Date().toISOString()
+        };
+        return await database.put('paths', path);
+    },
+
+    async getPath(pathId) {
+        return await database.get('paths', pathId);
+    },
+
+    async getPathsByLayer(layerId) {
+        return await database.getByIndex('paths', 'layerId', layerId);
+    },
+
+    async getPathsByProject(projectId) {
+        return await database.getByIndex('paths', 'projectId', projectId);
+    },
+
+    async updatePath(pathId, updateData) {
+        const path = await database.get('paths', pathId);
+        if (path) {
+            const updatedPath = { ...path, ...updateData };
+            return await database.put('paths', updatedPath);
+        }
+        return false;
+    },
+
+    async deletePath(pathId) {
+        return await database.delete('paths', pathId);
+    },
+
+    async clearAllData() {
+        await database.clear('projects');
+        await database.clear('layers');
+        await database.clear('paths');
+    }
+};

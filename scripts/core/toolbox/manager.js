@@ -1,5 +1,5 @@
 import { TOOLS_MENU } from "../../shared/constants.js";
-import canvas from "../canvas/canvas.js";
+import { canvas } from "../canvas/canvas.js";
 
 const sideBarMenuElem = document.getElementById("tools");
 const toolsMenuElem = document.getElementById('toolsmenu');

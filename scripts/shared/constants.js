@@ -17,3 +17,8 @@ export const TOOLS_MENU = {
     'L': ['L-line', 'L-arcto'],
     'K': ['K-quadratic', 'K-bezier'],
 };
+
+export const CANVAS_PROP = {
+    width: 1920,
+    height: 1080
+}
