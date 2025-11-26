@@ -126,13 +126,6 @@ class LayerManager {
         this.setActiveLayer(id);
         
         if(save) {
-
-            console.log('Saving layer to DB', {
-                id: id,
-                projectId,
-                name: layer.name,
-                order
-            });
             await dbOperations.createLayer({
                 id: id,
                 projectId,
@@ -189,7 +182,7 @@ class LayerManager {
     }
 
     saveDrawing(path, points) {
-        console.clear();
+        // console.clear();
         const layer = this.getActiveLayer();
 
         if (layer == null) {
@@ -208,8 +201,8 @@ class LayerManager {
 
         layer.addData(path, data);
 
-        console.table(points)
-        console.log('Total points:', points.length);
+        // console.table(points)
+        // console.log('Total points:', points.length);
     }
 
     setActiveLayer(id) {

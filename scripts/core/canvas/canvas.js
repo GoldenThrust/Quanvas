@@ -39,8 +39,8 @@ export default class Canvas {
                 this.#flushDrawing();
             this.createPath();
             const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const x = (e.clientX - rect.left) / CANVAS_PROP.scale;
+            const y = (e.clientY - rect.top) / CANVAS_PROP.scale;
 
             this.initialPosition.x = x;
             this.initialPosition.y = y;
@@ -48,14 +48,15 @@ export default class Canvas {
             this.previousPosition.y = y;
 
             this.isDrawing = true;
-            console.log('mousedown')
         });
 
         this.canvas.addEventListener('mousemove', (e) => {
             if (this.isDrawing) {
                 const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+
+                const x = (e.clientX - rect.left) / CANVAS_PROP.scale; 
+                const y = (e.clientY - rect.top) / CANVAS_PROP.scale;
+                console.log(CANVAS_PROP.scale);
 
                 this.draw(x, y);
 
@@ -133,12 +134,9 @@ export default class Canvas {
             this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
             this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
         }
-
-        console.log(this.points.length);
     }
 
     #computeHandle(p, pPrev, pNext) {
-        console.log(p, pPrev, pNext);
         if (!(p && pPrev && pNext)) return;
 
         const { ux, uy } = calculateTangent(pPrev, pNext);
@@ -323,7 +321,6 @@ export default class Canvas {
     }
 
     #bezier(x, y) {
-        console.clear();
         this.#drawline();
         const count = this.points.length;
         this.points[count - 1] = { x, y }
@@ -332,7 +329,6 @@ export default class Canvas {
 
         if (handle) {
             const { prev, next } = handle;
-            console.log('handle')
             this.points[count - 4] = prev;
             this.points[count - 2] = next;
         }

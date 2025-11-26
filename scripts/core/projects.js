@@ -54,7 +54,6 @@ export default class Project {
                 thumbnail: await Canvas.createPreviewCanvas(Canvas.createCanvas(projectWidth, projectHeight))
             });
 
-            console.log(`Project "${projectName}" created with dimensions ${projectWidth}x${projectHeight}`);
         });
 
 

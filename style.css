@@ -21,6 +21,7 @@ body {
   flex-direction: column;
   height: 100vh;
   background-color: rgb(21, 8, 34);
+  overflow: hidden;
 }
 
 header {
@@ -60,6 +61,32 @@ main {
   z-index: 10000;
   /* opacity: 1; */
   /* color: #8989891a; */
+}
+
+#controller {
+  position: relative;
+  border: 2px solid grey;
+  box-shadow: 0 0 10px black;
+  margin: 10px 0px 10px;
+  background-color: gray;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+}
+
+#controller:active {
+  cursor: grabbing !important;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: white;
+  transform-origin: 0 0;
+  cursor: auto;
 }
 
 #homePage {
@@ -306,13 +333,6 @@ main {
   display: none;
 }
 
-#root {
-  position: relative;
-  border: 2px solid grey;
-  box-shadow: 0 0 10px black;
-  background-color: white;
-  margin: 10px 0px 10px;
-}
 
 #tools,
 #layersSection,
@@ -419,4 +439,67 @@ main {
 .dragging {
   border: 2px solid red;
   background-color: antiquewhite;
+}
+
+/* Transform Controls */
+#transformControls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.control-group {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.control-group button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-group button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.control-group button:active {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0.95);
+}
+
+.transform-info {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 6px;
+  padding: 6px 8px;
+  gap: 2px;
+}
+
+.transform-info span {
+  color: white;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  min-width: 40px;
 }

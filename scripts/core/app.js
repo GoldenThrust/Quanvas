@@ -1,5 +1,6 @@
 import { CANVAS_PROP, TOOL_IDS } from "../shared/constants.js";
-import canvas from "./canvas/canvas.js";
+import { rootControllerElem, rootElem } from "../shared/domElem.js";
+import { canvas } from "./canvas/canvas.js";
 import layerManager from "./canvas/layer/manager.js";
 import Database, { dbOperations } from "./memory/database.js";
 import { project } from "./projects.js";
@@ -15,6 +16,17 @@ class APPManager {
             clip: false,
             fill: false
         }
+
+        this.transform = {
+            scale: 1,
+            rotation: 0,
+            translateX: 0,
+            translateY: 0
+        }
+
+        this.isDragging = false;
+        this.lastMousePos = { x: 0, y: 0 };
+        this.isSpacePressed = false;
 
         this.keybinding = new Map();
 
@@ -37,6 +49,10 @@ class APPManager {
             'f': () => this.toggleState('fill'),
             'ctrl+shift+c': () => this.toggleState('clip'),
             'escape': () => canvas.releasePath(),
+            'ctrl+0': () => this.resetView(),
+            'ctrl+1': () => this.fitToScreen(),
+            'ctrl+=': () => this.zoom(1.25),
+            'ctrl+-': () => this.zoom(0.8),
         }
         await project.init();
 
@@ -66,6 +82,26 @@ class APPManager {
         if (layerManager.layers.size === 0) {
             layerManager.createLayer();
         }
+
+        const box = rootControllerElem.getBoundingClientRect();
+
+        rootElem.style.width = `${CANVAS_PROP.width}px`;
+        rootElem.style.height = `${CANVAS_PROP.height}px`;
+
+        // Calculate initial fit-to-screen scale
+        const scaleX = box.width / CANVAS_PROP.width;
+        const scaleY = box.height / CANVAS_PROP.height;
+        const fitScale = Math.min(scaleX, scaleY);
+
+        if (fitScale < 1) {
+            this.transform.scale = fitScale;
+            this.transform.translateX = (box.width - CANVAS_PROP.width * fitScale) / 2;
+            this.transform.translateY = (box.height - CANVAS_PROP.height * fitScale) / 2;
+        }
+
+        this.#updateTransform();
+        this.#addCanvasEventListeners();
+        this.#addTransformControlListeners();
     }
 
 
@@ -76,7 +112,6 @@ class APPManager {
         })
 
         addEventListener('keydown', (e) => {
-            // e.preventDefault();
             let keyBind = '';
 
             if (e.ctrlKey) keyBind += 'ctrl+';
@@ -84,9 +119,19 @@ class APPManager {
             if (e.altKey) keyBind += 'alt+'
             keyBind += e.key;
 
-            console.log(keyBind);
+            if (keyBind === ' ') {
+                this.isSpacePressed = true;
+                e.preventDefault();
+                return;
+            }
 
             this.keybinding.get(keyBind.toLowerCase())?.()
+        })
+
+        addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                this.isSpacePressed = false;
+            }
         })
     }
 
@@ -108,9 +153,7 @@ class APPManager {
                 break;
 
             case 'fill':
-                console.log(this.state[id])
                 this.state[id] = !this.state[id];
-                console.log(this.state[id] === true ? './images/tools/fill.svg' : './images/tools/stroke.svg')
                 elem.src = this.state[id] === true ? './images/tools/fill.svg' : './images/tools/stroke.svg';
                 break;
 
@@ -120,6 +163,152 @@ class APPManager {
                 else elem.classList.remove('selected');
                 break;
         }
+    }
+
+    // Transform utility methods
+    #updateTransform() {
+        const { scale, rotation, translateX, translateY } = this.transform;
+        const transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        rootElem.style.transform = transform;
+        rootElem.style.transformOrigin = '0 0';
+
+        CANVAS_PROP.scale = scale;
+        // Update info display
+        this.#updateTransformInfo();
+    }
+
+    #updateTransformInfo() {
+        const scaleInfo = document.getElementById('scaleInfo');
+        const rotationInfo = document.getElementById('rotationInfo');
+
+        if (scaleInfo) {
+            scaleInfo.textContent = `${Math.round(this.transform.scale * 100)}%`;
+        }
+        if (rotationInfo) {
+            rotationInfo.textContent = `${Math.round(this.transform.rotation)}°`;
+        }
+    }
+
+    #addTransformControlListeners() {
+        // Button controls
+        document.getElementById('resetView')?.addEventListener('click', () => this.resetView());
+        document.getElementById('fitToScreen')?.addEventListener('click', () => this.fitToScreen());
+        document.getElementById('zoomIn')?.addEventListener('click', () => this.zoom(1.25));
+        document.getElementById('zoomOut')?.addEventListener('click', () => this.zoom(0.8));
+    }
+
+    #addCanvasEventListeners() {
+        const controller = rootControllerElem;
+
+        // Mouse wheel zoom
+        controller.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const dx = e.deltaX;
+            const dy = e.deltaY;
+
+            if (e.ctrlKey) {
+                const rect = controller.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const zoomFactor = dy > 0 ? 0.9 : 1.1;
+                this.zoomAtPoint(centerX, centerY, zoomFactor);
+            } else {
+                this.transform.translateX -= dx;
+                this.transform.translateY -= dy;
+            }
+
+            this.#updateTransform();
+        });
+
+        controller.addEventListener('mousedown', (e) => {
+            if (this.isSpacePressed || e.button === 1) {
+                this.isDragging = true;
+                this.lastMousePos = { x: e.clientX, y: e.clientY };
+                controller.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+        });
+
+        controller.addEventListener('mousemove', (e) => {
+            if (this.isDragging) {
+                const deltaX = e.clientX - this.lastMousePos.x;
+                const deltaY = e.clientY - this.lastMousePos.y;
+
+                this.transform.translateX += deltaX;
+                this.transform.translateY += deltaY;
+
+                this.#updateTransform();
+
+                this.lastMousePos = { x: e.clientX, y: e.clientY };
+                e.preventDefault();
+            } else if (this.isSpacePressed) {
+                controller.style.cursor = 'grab';
+            } else {
+                controller.style.cursor = 'default';
+            }
+        });
+
+        controller.addEventListener('mouseup', () => {
+            if (this.isDragging) {
+                this.isDragging = false;
+                controller.style.cursor = this.isSpacePressed ? 'grab' : 'default';
+            }
+        });
+
+        controller.addEventListener('mouseleave', () => {
+            this.isDragging = false;
+            controller.style.cursor = 'default';
+        });
+    }
+
+    // Transform control methods
+    zoom(factor) {
+        const rect = rootControllerElem.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        this.zoomAtPoint(centerX, centerY, factor);
+    }
+
+    zoomAtPoint(x, y, factor) {
+        const oldScale = this.transform.scale;
+        this.transform.scale *= factor;
+
+        // Limit zoom range
+        this.transform.scale = Math.max(0.1, Math.min(10, this.transform.scale));
+
+        const scaleChange = this.transform.scale / oldScale;
+
+        // Adjust translation to zoom toward the point
+        this.transform.translateX = x - (x - this.transform.translateX) * scaleChange;
+        this.transform.translateY = y - (y - this.transform.translateY) * scaleChange;
+
+        this.#updateTransform();
+    }
+
+    resetView() {
+        this.transform = {
+            scale: 1,
+            rotation: 0,
+            translateX: 0,
+            translateY: 0
+        };
+        this.#updateTransform();
+    }
+
+    fitToScreen() {
+        const box = rootControllerElem.getBoundingClientRect();
+        const scaleX = box.width / CANVAS_PROP.width;
+        const scaleY = box.height / CANVAS_PROP.height;
+        const fitScale = Math.min(scaleX, scaleY);
+
+        this.transform = {
+            scale: fitScale,
+            rotation: 0,
+            translateX: (box.width - CANVAS_PROP.width * fitScale) / 2,
+            translateY: (box.height - CANVAS_PROP.height * fitScale) / 2
+        };
+        this.#updateTransform();
     }
 }
 

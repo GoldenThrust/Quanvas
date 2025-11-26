@@ -86,8 +86,24 @@
             <img src="./images/tools/L-line.svg" id="L-line" alt="line">
             <img src="./images/tools/K-quadratic.svg" id="K-quadratic" alt="quadratic curve">
         </div>
-        <div id="root">
-            <canvas id="canvas"></canvas>
+        <div id="controller">
+            <div id="root">
+                <canvas id="canvas"></canvas>
+            </div>
+            <div id="transformControls">
+                <div class="control-group">
+                    <button id="resetView" title="Reset View (Ctrl+0)">⌂</button>
+                    <button id="fitToScreen" title="Fit to Screen (Ctrl+1)">⛶</button>
+                </div>
+                <div class="control-group">
+                    <button id="zoomIn" title="Zoom In (Ctrl++)">+</button>
+                    <button id="zoomOut" title="Zoom Out (Ctrl+-)">−</button>
+                </div>
+                <div class="transform-info">
+                    <span id="scaleInfo">100%</span>
+                    <span id="rotationInfo">0°</span>
+                </div>
+            </div>
         </div>
         <div id="layersSection" draggable="true">
             <div id="layers">
