@@ -15,6 +15,7 @@ class LayerManager {
     constructor() {
         this.layers = new Map();
         this.activeLayerId = null;
+        this.focusedLayerId = null;
         this.project = null;
         this.#addEventListener();
     }
@@ -23,7 +24,7 @@ class LayerManager {
         const sortPos = [0, 0];
         addLayerElem.addEventListener('click', _ => {
             this.createLayer();
-        })
+        });
 
         layersElem.addEventListener('dragstart', (e) => {
             const layer = e.target.closest('.layer');
@@ -76,13 +77,50 @@ class LayerManager {
         const layerDivElem = document.createElement('div');
         layerDivElem.classList.add('layer');
         layerDivElem.draggable = true;
+        layerDivElem.tabIndex = 0; // Make div focusable
         layerDivElem.dataset.id = id;
         layerDivElem.dataset.order = order;
         layersElem.prepend(layerDivElem);
         const layer = new Layer(id, name, order, layerDivElem);
         this.layers.set(id, layer);
+        
         layerDivElem.addEventListener('click', e => {
             this.setActiveLayer(e.currentTarget.dataset.id);
+            this.focusedLayerId = e.currentTarget.dataset.id;
+            e.currentTarget.focus();
+        });
+
+        layerDivElem.addEventListener('focus', e => {
+            this.focusedLayerId = e.currentTarget.dataset.id;
+        });
+
+        layerDivElem.addEventListener('blur', e => {
+            if (!layersElem.contains(e.relatedTarget)) {
+                this.focusedLayerId = null;
+            }
+        });
+
+        layerDivElem.addEventListener('keydown', e => {
+            switch(e.key) {
+                case 'Enter':
+                case ' ':
+                    e.preventDefault();
+                    this.setActiveLayer(e.currentTarget.dataset.id);
+                    break;
+                case 'Delete':
+                case 'Backspace':
+                    e.preventDefault();
+                    this.removeLayer();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.#focusAdjacentLayer(e.currentTarget, -1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.#focusAdjacentLayer(e.currentTarget, 1);
+                    break;
+            }
         });
 
         this.setActiveLayer(id);
@@ -189,8 +227,33 @@ class LayerManager {
         layer.setName(id, name);
     }
 
-    removeLayer(id) {
-
+    async removeLayer() {
+        if (!this.focusedLayerId) return;
+        const id = this.focusedLayerId;
+        
+        const layer = this.layers.get(id);
+        if (!layer) return;
+        
+        try {
+            await dbOperations.deleteLayer(id);
+            
+            layer.layer.remove();
+            layer.canvas.remove();
+            
+            this.layers.delete(id);
+            
+            this.focusedLayerId = null;
+            
+            if (this.activeLayerId === id) {
+                this.activeLayerId = null;
+                const firstLayer = this.layers.values().next().value;
+                if (firstLayer) {
+                    this.setActiveLayer(firstLayer.id);
+                }
+            }
+        } catch (error) {
+            console.error('Error removing layer:', error);
+        }
     }
 
     moveLayer(id, toindex) {
@@ -240,6 +303,18 @@ class LayerManager {
             },
             { offset: Number.NEGATIVE_INFINITY }
         ).element;
+    }
+
+    #focusAdjacentLayer(currentElement, direction) {
+        const layerElements = Array.from(layersElem.querySelectorAll('.layer'));
+        const currentIndex = layerElements.indexOf(currentElement);
+        const nextIndex = currentIndex + direction;
+        
+        if (nextIndex >= 0 && nextIndex < layerElements.length) {
+            const nextLayer = layerElements[nextIndex];
+            nextLayer.focus();
+            this.focusedLayerId = nextLayer.dataset.id;
+        }
     }
 }
 

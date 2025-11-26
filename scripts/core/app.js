@@ -84,6 +84,8 @@ class APPManager {
             if (e.altKey) keyBind += 'alt+'
             keyBind += e.key;
 
+            console.log(keyBind);
+
             this.keybinding.get(keyBind.toLowerCase())?.()
         })
     }
