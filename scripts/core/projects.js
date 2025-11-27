@@ -1,3 +1,4 @@
+import app from "./app.js";
 import Canvas from "./canvas/canvas.js";
 import layerManager from "./canvas/layer/manager.js";
 import Database, { dbOperations } from "./memory/database.js";
@@ -109,7 +110,7 @@ export default class Project {
             }
         });
 
-        menu.addEventListener('click', _ => { homePage.style.display = 'block'; layerManager.clearAll(); });
+        menu.addEventListener('click', _ => { homePage.style.display = 'block'; layerManager.init(); });
     }
 
     async init() {
@@ -133,6 +134,7 @@ export default class Project {
         }).catch(err => {
             console.error('Error loading projects:', err);
         });
+
     }
 
     createProjectElement(id, name, width, height) {
@@ -154,10 +156,11 @@ export default class Project {
     }
 
 
-    openProject(id, name) {
+    async openProject(id, name) {
         homePage.style.display = 'none';
         localStorage.setItem('current-project', id);
         console.log(`Opening project: ${name} (ID: ${id})`);
+        await app.init();
     }
 }
 

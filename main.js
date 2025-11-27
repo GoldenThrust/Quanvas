@@ -1,9 +1,9 @@
 import toolsManager from "./scripts/core/toolbox/manager.js";
 import layerManager from "./scripts/core/canvas/layer/manager.js";
 import app from "./scripts/core/app.js";
-import { v4 as uuid } from "uuid";
 import { dbOperations } from "./scripts/core/memory/database.js";
 import Canvas from "./scripts/core/canvas/canvas.js";
+import { project } from "./scripts/core/projects.js";
 
 
 if ("serviceWorker" in navigator) {
@@ -56,6 +56,4 @@ CanvasRenderingContext2D.prototype.mark = function (x, y, text, color = 'yellow'
 // }, false);
 
 
-
-app.init();
-
+await project.init();

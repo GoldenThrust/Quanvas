@@ -4,7 +4,7 @@ import app from '../../app.js';
 import toolsManager from '../../toolbox/manager.js';
 import Serializer from './serialization.js';
 import { v4 as uuid } from 'uuid';
-import Database, { database, dbOperations } from '../../memory/database.js';
+import Database, { dbOperations } from '../../memory/database.js';
 import { canvas } from '../canvas.js';
 
 const layersElem = document.getElementById('layers');
@@ -61,7 +61,10 @@ class LayerManager {
                 sortPos[1] = Number(aCanvas.layer.dataset.order);
             }
         });
+    }
 
+    init() {
+        this.#clearAll();
     }
 
     async createLayer(id = null, name = null, order = null) {
@@ -83,7 +86,7 @@ class LayerManager {
         layersElem.prepend(layerDivElem);
         const layer = new Layer(id, name, order, layerDivElem);
         this.layers.set(id, layer);
-        
+
         layerDivElem.addEventListener('click', e => {
             this.setActiveLayer(e.currentTarget.dataset.id);
             this.focusedLayerId = e.currentTarget.dataset.id;
@@ -101,7 +104,7 @@ class LayerManager {
         });
 
         layerDivElem.addEventListener('keydown', e => {
-            switch(e.key) {
+            switch (e.key) {
                 case 'Enter':
                 case ' ':
                     e.preventDefault();
@@ -124,14 +127,21 @@ class LayerManager {
         });
 
         this.setActiveLayer(id);
-        
-        if(save) {
+
+        if (save) {
             await dbOperations.createLayer({
                 id: id,
                 projectId,
                 name: layer.name,
                 order
             })
+        } else {
+            const paths = await dbOperations.getPathsByLayer(id);
+
+            for (const pathData of paths) {
+                const unserializedData = Serializer.unserialize(pathData);
+                canvas.flushToPath(unserializedData);
+            }
         }
     }
 
@@ -181,7 +191,7 @@ class LayerManager {
         return this.getLayer(this.activeLayerId);
     }
 
-    saveDrawing(path, points) {
+    async saveDrawing(path, points, state) {
         // console.clear();
         const layer = this.getActiveLayer();
 
@@ -193,16 +203,35 @@ class LayerManager {
         const data = Serializer.serialize({
             points,
             state: app.state,
-            tool: toolsManager.activeToolId,
-            layer: layer.id
+            type: toolsManager.activeToolId,
+            layerId: layer.id,
+            projectId: Database.getCurrentProjectID(),
         })
 
-        layer.drawPath(path, app.state.fill);
+        layer.drawPath(path, state.fill, state.clip);
 
+        await dbOperations.createPath(data)
         layer.addData(path, data);
+    }
 
-        // console.table(points)
-        // console.log('Total points:', points.length);
+    async saveDrawingIn(id, path, points, state) {
+        const layer = this.getLayer(id);
+
+        if (layer == null) {
+            console.warn('No layer to save drawing');
+            return;
+        }
+
+        const data = Serializer.serialize({
+            points,
+            state: app.state,
+            type: toolsManager.activeToolId,
+            layerId: layer.id,
+            projectId: Database.getCurrentProjectID(),
+        })
+
+        layer.drawPath(path, state.fill, state.clip);
+        layer.addData(path, data);
     }
 
     setActiveLayer(id) {
@@ -223,20 +252,20 @@ class LayerManager {
     async removeLayer() {
         if (!this.focusedLayerId) return;
         const id = this.focusedLayerId;
-        
+
         const layer = this.layers.get(id);
         if (!layer) return;
-        
+
         try {
             await dbOperations.deleteLayer(id);
-            
+
             layer.layer.remove();
             layer.canvas.remove();
-            
+
             this.layers.delete(id);
-            
+
             this.focusedLayerId = null;
-            
+
             if (this.activeLayerId === id) {
                 this.activeLayerId = null;
                 const firstLayer = this.layers.values().next().value;
@@ -249,31 +278,7 @@ class LayerManager {
         }
     }
 
-    moveLayer(id, toindex) {
-
-    }
-
-    mergeLayer(topLayerId, bottomLayerId) {
-
-    }
-
-    addPathToLayer(id, path) {
-
-    }
-
-    clearLayer(id) {
-
-    }
-
-    getState() {
-
-    }
-
-    loadState(state) {
-
-    }
-
-    clearAll() {
+    #clearAll() {
         rootElem.innerHTML = '';
         layersElem.innerHTML = '';
         rootElem.append(canvas.canvas);
@@ -302,7 +307,7 @@ class LayerManager {
         const layerElements = Array.from(layersElem.querySelectorAll('.layer'));
         const currentIndex = layerElements.indexOf(currentElement);
         const nextIndex = currentIndex + direction;
-        
+
         if (nextIndex >= 0 && nextIndex < layerElements.length) {
             const nextLayer = layerElements[nextIndex];
             nextLayer.focus();

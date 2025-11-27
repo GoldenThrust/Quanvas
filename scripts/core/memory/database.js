@@ -227,17 +227,22 @@ export const dbOperations = {
 
     async deleteProject(projectId) {
         localStorage.removeItem('current-project');
-        const layers = await database.getByIndex('layers', 'projectId', projectId);
-        if (layers) {
-            await database.delete('layers', layers.id);
-        }
+        const layers = await database.getAllByIndex('layers', 'projectId', projectId);
 
-        const paths = await database.getByIndex('paths', 'projectId', projectId);
-        if (paths) {
-            await database.delete('paths', paths.id);
-        }
+        if (layers.length !== 0) {
+            layers.forEach(async (layer) => {
+                await database.delete('layers', layer.id);
+            });
 
-        return await database.delete('projects', projectId);
+            const paths = await database.getAllByIndex('paths', 'projectId', projectId);
+            if (paths.length !== 0) {
+                paths.forEach(async (path) => {
+                    await database.delete('paths', path.id);
+                });
+            }
+
+            return await database.delete('projects', projectId);
+        }
     },
 
     async createLayer(layerData) {
@@ -275,15 +280,18 @@ export const dbOperations = {
     },
 
     async deleteLayer(layerId) {
-        const paths = await database.getByIndex('paths', 'layerId', layerId);
-        if (paths) {
-            await database.delete('paths', paths.id);
+        const paths = await database.getAllByIndex('paths', 'layerId', layerId);
+        if (paths.length !== 0) {
+            paths.forEach(async (path) => {
+                await database.delete('paths', path.id);
+            });
         }
 
         return await database.delete('layers', layerId);
     },
 
     async createPath(pathData) {
+        console.log(pathData);
         const path = {
             ...pathData,
             createdAt: new Date().toISOString()
@@ -296,11 +304,11 @@ export const dbOperations = {
     },
 
     async getPathsByLayer(layerId) {
-        return await database.getByIndex('paths', 'layerId', layerId);
+        return await database.getAllByIndex('paths', 'layerId', layerId);
     },
 
     async getPathsByProject(projectId) {
-        return await database.getByIndex('paths', 'projectId', projectId);
+        return await database.getAllByIndex('paths', 'projectId', projectId);
     },
 
     async updatePath(pathId, updateData) {

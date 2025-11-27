@@ -61,8 +61,8 @@ export default class Layer {
         });
     }
 
-    drawPath(path, fill) {
-        if (app.state.clip) {
+    drawPath(path, fill, clip) {
+        if (clip) {
             this.ctx.clip(path);
             if (!fill) this.ctx.stroke(path);
         } else {
@@ -79,6 +79,11 @@ export default class Layer {
     addData(path, data) {
         data['path'] = path;
         this.data.add(data);
+    }
+
+    clear() {
+        this.canvas.width = CANVAS_PROP.width;
+        this.canvas.height = CANVAS_PROP.height;
     }
 
     setName(id, name) {

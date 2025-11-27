@@ -24,6 +24,9 @@ export default class Canvas {
         this.flush = true;
         this.points = [];
         this.pointsCount = 0;
+        this.state = app.state;
+        this.activeTool = null;
+        this.painting = false;
 
         this.#addEventlistener();
     }
@@ -35,7 +38,7 @@ export default class Canvas {
 
     #addEventlistener() {
         this.canvas.addEventListener('mousedown', (e) => {
-            if (!['L', 'K'].includes(toolsManager.activeToolId[0]))
+            if (!['L', 'K'].includes(this.activeTool[0]))
                 this.#flushDrawing();
             this.createPath();
             const rect = this.canvas.getBoundingClientRect();
@@ -54,7 +57,7 @@ export default class Canvas {
             if (this.isDrawing) {
                 const rect = this.canvas.getBoundingClientRect();
 
-                const x = (e.clientX - rect.left) / CANVAS_PROP.scale; 
+                const x = (e.clientX - rect.left) / CANVAS_PROP.scale;
                 const y = (e.clientY - rect.top) / CANVAS_PROP.scale;
                 console.log(CANVAS_PROP.scale);
 
@@ -69,12 +72,13 @@ export default class Canvas {
         // this.canvas.addEventListener('mouseleave', () => this.#flushDrawing());
     }
 
-    #reset() {
+    reset() {
         this.#clear();
         this.isDrawing = false;
         this.path = null;
         this.points = [];
         this.pointsCount = 0;
+        this.painting = false;
     }
 
     #flushDrawing(flush) {
@@ -83,7 +87,7 @@ export default class Canvas {
         this.draw(this.previousPosition.x, this.previousPosition.y);
         this.pointsCount++;
 
-        if (['K', 'L'].includes(toolsManager.activeToolId[0]) && this.flush) {
+        if (['K', 'L'].includes(this.activeTool[0]) && this.flush) {
             this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
             this.#createCurve();
             this.flush = false;
@@ -92,23 +96,49 @@ export default class Canvas {
         if (flush !== undefined) this.flush = flush;
 
         if (this.flush) {
-            if (['R', 'C'].includes(toolsManager.activeToolId[0])) this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
+            if (['R', 'C'].includes(this.activeTool[0])) this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
 
-            layerManager.saveDrawing(this.path, this.points)
+            layerManager.saveDrawing(this.path, this.points, this.state);
 
-            this.#reset()
+            this.reset()
         }
 
         this.flush = true;
     }
 
+    flushToPath(data) {
+        const { points, type, layerId, state } = data;
+
+        this.painting = true;
+
+        this.createPath();
+        for (let i = 0; i < points.length; i++) {
+            // console.log('Drawing point:', i);
+            // console.table(points[i])
+            if (i == 0) {
+                this.initialPosition.x = points[0].x;
+                this.initialPosition.y = points[0].y;
+            }
+
+            this.previousPosition.x = points[Math.max(0, i - 1)].x;
+            this.previousPosition.y = points[Math.max(0, i - 1)].y;
+            this.draw(points[i].x, points[i].y, state, type);
+        }
+
+        layerManager.saveDrawingIn(layerId, this.path, points, state);
+        this.reset();
+    }
+
     releasePath() {
-        if ((['L',].includes(toolsManager.activeToolId[0]) && this.points.length < 2) || (['P', 'K'].includes(toolsManager.activeToolId[0]) && this.points.length < 3)) return this.#reset();
+        if (this.activeTool === null) this.activeTool = toolsManager.activeToolId;
+        console.log(this.activeTool)
+        if ((['L',].includes(this.activeTool[0]) && this.points.length < 2) || (['P', 'K'].includes(this.activeTool[0]) && this.points.length < 3)) return this.reset();
         this.#flushDrawing(true);
     }
 
     #clear() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.canvas.width = CANVAS_PROP.width;
+        this.canvas.height = CANVAS_PROP.height;
     }
 
     #moveToInitialPosition() {
@@ -120,7 +150,7 @@ export default class Canvas {
     }
 
     #moveToPreviousPosition() {
-        if (app.state.fill || app.state.clip) {
+        if (this.state.fill || this.state.clip) {
             this.ctx.lineTo(this.previousPosition.x, this.previousPosition.y);
             this.path?.lineTo?.(this.previousPosition.x, this.previousPosition.y);
         } else {
@@ -130,7 +160,7 @@ export default class Canvas {
     }
 
     #createCurve() {
-        if (toolsManager.activeToolId === 'K-bezier') {
+        if (this.activeTool === 'K-bezier') {
             this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
             this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
         }
@@ -162,15 +192,15 @@ export default class Canvas {
         }
     }
 
-    draw(x, y) {
-        const state = app.state;
-        const activeTool = toolsManager.activeToolId;
+    draw(x, y, state = null, activeTool = null) {
+        this.state = state ?? app.state;
+        this.activeTool = activeTool ?? toolsManager.activeToolId;
 
-        const drawGPath = ['P', 'L', 'K'].includes(activeTool[0]);
+        const drawGPath = ['P', 'L', 'K'].includes(this.activeTool[0]);
         if (drawGPath)
             this.ctx.beginPath();
-        if (!state.erase) {
-            switch (activeTool) {
+        if (!this.state.erase) {
+            switch (this.activeTool) {
                 case 'P-pen':
                     this.#pen(x, y);
                     break;
@@ -211,7 +241,7 @@ export default class Canvas {
 
 
 
-            if (state.fill && !drawGPath) {
+            if (this.state.fill && !drawGPath) {
                 this.ctx.fill(this.path);
             }
             if (drawGPath)
@@ -219,7 +249,7 @@ export default class Canvas {
             else
                 this.ctx.stroke(this.path);
 
-            if (activeTool[0] === 'P') {
+            if (this.activeTool[0] === 'P') {
                 this.points.push({ x, y });
             }
 
@@ -254,7 +284,7 @@ export default class Canvas {
                 const xs = (x + (stepDX * i)) + random(-randomNess, randomNess);
                 const ys = (y + (stepDY * i)) + random(-randomNess, randomNess);
 
-                if (!app.state.fill) {
+                if (!this.state.fill) {
                     path.moveTo(xs, ys);
                 }
                 this.ctx.moveTo(xs, ys);
@@ -341,17 +371,9 @@ export default class Canvas {
             const p = path[i + 2];
             this.ctx.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
             this.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
-            // this.ctx.circle(cp1.x, cp1.y - 10, 'red', `${i} C1 ${Math.round(cp1.x)} ${Math.round(cp1.y)}`);
-            // this.ctx.circle(cp2.x, cp2.y - 20, 'green', `${i} C2 ${Math.round(cp2.x)} ${Math.round(cp2.y)}`);
-            // this.ctx.circle(p.x, p.y, 'blue', `${i} P ${Math.round(p.x)} ${Math.round(p.y)}`);
         }
 
         this.ctx.bezierCurveTo?.(path[count - 2].x, path[count - 2].y, path[count - 1].x, path[count - 1].y, x, y);
-
-        // this.ctx.circle(path[0].x, path[0].y, 'black', `P ${Math.round(path[0].x)} ${Math.round(path[0].y)}`);
-        // this.ctx.circle(path[count - 2].x, path[count - 2].y - 10, 'cyan', `C1 ${Math.round(path[count - 2].x)} ${Math.round(path[count - 2].y)}`);
-        // this.ctx.circle(path[count - 1].x, path[count - 1].y - 20, 'magenta', `C2 ${Math.round(path[count - 1].x)} ${Math.round(path[count - 1].y)}`);
-        // this.ctx.circle(x, y, 'yellow', `P ${Math.round(x)} ${Math.round(y)}`);
     }
 
     #quadratic(x, y) {

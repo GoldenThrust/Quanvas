@@ -31,6 +31,8 @@ class APPManager {
         this.keybinding = new Map();
 
         this.#addEventListener();
+        this.#addCanvasEventListeners();
+        this.#addTransformControlListeners();
     }
 
     async init() {
@@ -54,7 +56,6 @@ class APPManager {
             'ctrl+=': () => this.zoom(1.25),
             'ctrl+-': () => this.zoom(0.8),
         }
-        await project.init();
 
         Object.entries(defaultKeyBind).forEach(([id, cb]) => {
             this.addKeyBind(id, cb);
@@ -97,11 +98,14 @@ class APPManager {
             this.transform.scale = fitScale;
             this.transform.translateX = (box.width - CANVAS_PROP.width * fitScale) / 2;
             this.transform.translateY = (box.height - CANVAS_PROP.height * fitScale) / 2;
+        } else {
+            this.transform.translateX = (box.width - CANVAS_PROP.width) / 2;
+            this.transform.translateY = (box.height - CANVAS_PROP.height) / 2;
         }
 
         this.#updateTransform();
-        this.#addCanvasEventListeners();
-        this.#addTransformControlListeners();
+
+        canvas.reset();
     }
 
 
