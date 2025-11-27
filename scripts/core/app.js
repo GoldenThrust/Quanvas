@@ -1,6 +1,6 @@
-import { CANVAS_PROP, TOOL_IDS } from "../shared/constants.js";
+import { CANVAS_PROP, TOOL_IDS, worker } from "../shared/constants.js";
 import { rootControllerElem, rootElem } from "../shared/domElem.js";
-import { canvas } from "./canvas/canvas.js";
+import Canvas, { canvas } from "./canvas/canvas.js";
 import layerManager from "./canvas/layer/manager.js";
 import Database, { dbOperations } from "./memory/database.js";
 import { project } from "./projects.js";
@@ -27,12 +27,16 @@ class APPManager {
         this.isDragging = false;
         this.lastMousePos = { x: 0, y: 0 };
         this.isSpacePressed = false;
+        this.isDirty = false;
 
         this.keybinding = new Map();
 
         this.#addEventListener();
         this.#addCanvasEventListeners();
         this.#addTransformControlListeners();
+        setTimeout(async () => {
+            await this.#save();
+        }, 5000);
     }
 
     async init() {
@@ -55,6 +59,7 @@ class APPManager {
             'ctrl+1': () => this.fitToScreen(),
             'ctrl+=': () => this.zoom(1.25),
             'ctrl+-': () => this.zoom(0.8),
+            'ctrl+s': async () => await this.#save(true)
         }
 
         Object.entries(defaultKeyBind).forEach(([id, cb]) => {
@@ -109,6 +114,25 @@ class APPManager {
     }
 
 
+    async #save(notify = false) {
+        if (!this.isDirty) return;
+        canvas.saveOffScreen();
+        const thumbnail = await Canvas.createPreviewCanvas(canvas.offScreenCanvas)
+        const projectId = Database.getCurrentProjectID();
+        if (!projectId) return;
+        dbOperations.updateProject(projectId, { thumbnail });
+
+        if (notify) {
+            const saveNotification = document.getElementById('saveNotification');
+            saveNotification.classList.add('show');
+            setTimeout(() => {
+                saveNotification.classList.remove('show');
+            }, 2000);
+        }
+        this.isDirty = false;
+    }
+
+
     #addEventListener() {
         stateMenuElem.addEventListener('click', e => {
             const elem = e.target;
@@ -116,6 +140,16 @@ class APPManager {
         })
 
         addEventListener('keydown', (e) => {
+            const el = e.target;
+            if (
+                el.tagName === 'INPUT' ||
+                el.tagName === 'TEXTAREA' ||
+                el.isContentEditable
+            ) {
+                return;
+            }
+
+            e.preventDefault();
             let keyBind = '';
 
             if (e.ctrlKey) keyBind += 'ctrl+';
@@ -125,18 +159,33 @@ class APPManager {
 
             if (keyBind === ' ') {
                 this.isSpacePressed = true;
-                e.preventDefault();
                 return;
             }
 
-            this.keybinding.get(keyBind.toLowerCase())?.()
+            this.keybinding.get(keyBind.toLowerCase())?.();
         })
 
         addEventListener('keyup', (e) => {
+            e.preventDefault();
             if (e.code === 'Space') {
                 this.isSpacePressed = false;
             }
         })
+
+        addEventListener("beforeunload", (e) => {
+            this.#save();
+            e.preventDefault();
+            if (!this.isDirty) return;
+        });
+
+        addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "hidden") {
+                this.#save();
+            }
+        });
+
+        addEventListener("pagehide", () => this.#save());
+
     }
 
     addKeyBind(id, cb) {
@@ -171,7 +220,7 @@ class APPManager {
 
     // Transform utility methods
     #updateTransform() {
-        const { scale, rotation, translateX, translateY } = this.transform;
+        const { scale, translateX, translateY } = this.transform;
         const transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
         rootElem.style.transform = transform;
         rootElem.style.transformOrigin = '0 0';

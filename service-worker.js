@@ -7,7 +7,6 @@ const IMAGE_ASSETS = [
     '/images/tools/clipboard.svg',
     '/images/tools/eraser.svg',
     '/images/tools/fill.svg',
-    '/images/tools/fillrule.svg',
     '/images/tools/K-bezier.svg',
     '/images/tools/K-quadratic.svg',
     '/images/tools/L-arcto.svg',
@@ -16,7 +15,11 @@ const IMAGE_ASSETS = [
     '/images/tools/P-pen.svg',
     '/images/tools/R-rectangle.svg',
     '/images/tools/R-roundrectangle.svg',
-    '/images/tools/stroke.svg'
+    '/images/tools/stroke.svg',
+
+    '/images/icons/create.svg',
+    '/images/icons/delete.svg',
+    '/images/icons/menu.svg',
 ];
 
 const ASSETS_TO_CACHE = [
@@ -33,7 +36,6 @@ const ASSETS_TO_CACHE = [
 
 self.addEventListener("install", e => {
     e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS_TO_CACHE)).then(() => self.skipWaiting()));
-    console.log('install')
 });
 
 self.addEventListener("activate", e => {

@@ -33,10 +33,8 @@ CanvasRenderingContext2D.prototype.line = function (points, color = 'blue', radi
     points.forEach(({ x, y }, i) => {
         if (i) {
             c.lineTo(x, y);
-            console.log('line');
         } else {
             c.moveTo(x, y);
-            console.log('move')
         }
     });
     this.stroke(c);

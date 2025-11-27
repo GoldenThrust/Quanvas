@@ -40,7 +40,9 @@ export default class Project {
             const projectHeight = document.getElementById('projectHeight').value;
 
             const projectId = uuid();
-            const newProject = this.createProjectElement(projectId, projectName, projectWidth, projectHeight);
+            const thumbnail = await Canvas.createPreviewCanvas(Canvas.createCanvas(projectWidth, projectHeight));
+            const url = URL.createObjectURL(thumbnail);
+            const newProject = this.createProjectElement(projectId, projectName, url);;
 
             projectsContainer.appendChild(newProject);
 
@@ -52,15 +54,17 @@ export default class Project {
                 name: projectName,
                 width: projectWidth,
                 height: projectHeight,
-                thumbnail: await Canvas.createPreviewCanvas(Canvas.createCanvas(projectWidth, projectHeight))
+                thumbnail
             });
 
+            URL.revokeObjectURL(url);
             this.openProject(projectId, projectName);
         });
 
 
         // delete project
         projectsContainer.addEventListener('click', async (e) => {
+            e.preventDefault();
             if (e.target.closest('.delete')) {
                 const projectItem = e.target.closest('.project-item');
                 const projectName = projectItem.querySelector('.project-name').textContent;
@@ -69,7 +73,6 @@ export default class Project {
                 if (confirm(`Are you sure you want to delete "${projectName}"?`)) {
                     await dbOperations.deleteProject(id);
                     projectItem.remove();
-                    console.log(`Project "${projectName}" deleted`);
                 }
             }
         });
@@ -99,7 +102,6 @@ export default class Project {
                     name: e.target.textContent
                 });
 
-                console.log(`Project renamed to: ${e.target.textContent}`);
             }
         }, true);
 
@@ -129,8 +131,12 @@ export default class Project {
         // Load existing projects on startup
         dbOperations.getAllProjects().then(projects => {
             projects.forEach(project => {
-                const projectElement = this.createProjectElement(project.id, project.name, project.width, project.height, projects.thumbnail);
+                const url = URL.createObjectURL(project.thumbnail);
+                const projectElement = this.createProjectElement(project.id, project.name, url);
                 projectsContainer.appendChild(projectElement);
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 100)
             });
         }).catch(err => {
             console.error('Error loading projects:', err);
@@ -138,7 +144,7 @@ export default class Project {
 
     }
 
-    createProjectElement(id, name, width, height) {
+    createProjectElement(id, name, imgSrc) {
         const projectDiv = document.createElement('div');
         projectDiv.className = 'project-item';
         projectDiv.dataset.projectId = id;
@@ -148,7 +154,7 @@ export default class Project {
                 <img src="./images/icons/delete.svg" alt="Delete">
             </button>
             <div class="project-thumbnail">
-                <canvas width="${width}" height="${height}" style="width: 100%; height: 100%; background: white;"></canvas>
+                <img src="${imgSrc}" style="background-color: white;" alt="Project Thumbnail" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
             </div>
             <div class="project-name" contenteditable="true">${name}</div>
         `;
@@ -160,7 +166,6 @@ export default class Project {
     async openProject(id, name) {
         homePage.style.display = 'none';
         localStorage.setItem('current-project', id);
-        console.log(`Opening project: ${name} (ID: ${id})`);
         await app.init();
     }
 }

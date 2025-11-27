@@ -1,5 +1,4 @@
 import { CANVAS_PROP } from "../../shared/constants.js";
-import { rootElem } from "../../shared/domElem.js";
 import { random } from "../../utils/random.js";
 import { calculateTangent } from "../../utils/vector.js";
 import app from "../app.js";
@@ -12,8 +11,10 @@ export default class Canvas {
         this.initialPosition = { x: 0, y: 0 };
 
         this.canvas = document.getElementById('canvas');
+        this.offScreenCanvas = new OffscreenCanvas(CANVAS_PROP.width, CANVAS_PROP.height);
 
         this.ctx = this.canvas.getContext('2d');
+        this.offScreenCtx = this.offScreenCanvas.getContext('2d');
 
         this.canvas.width = CANVAS_PROP.width;
         this.canvas.height = CANVAS_PROP.height;
@@ -59,7 +60,6 @@ export default class Canvas {
 
                 const x = (e.clientX - rect.left) / CANVAS_PROP.scale;
                 const y = (e.clientY - rect.top) / CANVAS_PROP.scale;
-                console.log(CANVAS_PROP.scale);
 
                 this.draw(x, y);
 
@@ -113,8 +113,6 @@ export default class Canvas {
 
         this.createPath();
         for (let i = 0; i < points.length; i++) {
-            // console.log('Drawing point:', i);
-            // console.table(points[i])
             if (i == 0) {
                 this.initialPosition.x = points[0].x;
                 this.initialPosition.y = points[0].y;
@@ -131,7 +129,6 @@ export default class Canvas {
 
     releasePath() {
         if (this.activeTool === null) this.activeTool = toolsManager.activeToolId;
-        console.log(this.activeTool)
         if ((['L',].includes(this.activeTool[0]) && this.points.length < 2) || (['P', 'K'].includes(this.activeTool[0]) && this.points.length < 3)) return this.reset();
         this.#flushDrawing(true);
     }
@@ -140,6 +137,20 @@ export default class Canvas {
         this.canvas.width = CANVAS_PROP.width;
         this.canvas.height = CANVAS_PROP.height;
     }
+
+    #clearOffScreen() {
+        this.offScreenCanvas.width = CANVAS_PROP.width;
+        this.offScreenCanvas.height = CANVAS_PROP.height;
+    }
+
+    saveOffScreen() {
+        this.#clearOffScreen();
+
+        layerManager.layers.forEach(layer => {
+            this.offScreenCtx.drawImage(layer.canvas, 0, 0);
+        });
+    }
+
 
     #moveToInitialPosition() {
         if (!this.points.length) this.points.push({ x: this.initialPosition.x, y: this.initialPosition.y });
@@ -193,6 +204,7 @@ export default class Canvas {
     }
 
     draw(x, y, state = null, activeTool = null) {
+        app.isDirty = true;
         this.state = state ?? app.state;
         this.activeTool = activeTool ?? toolsManager.activeToolId;
 
@@ -412,18 +424,13 @@ export default class Canvas {
     }
 
     static createCanvas(width, height) {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        return canvas;
+        const offscreenCanvas = new OffscreenCanvas(width, height);
+        const ctx = offscreenCanvas.getContext('2d');
+        return offscreenCanvas;
     }
 
-    static createPreviewCanvas(canvas) {
-        return new Promise((resolve) => {
-            canvas.toBlob(blob => {
-                resolve(blob);
-            })
-        });
+    static async createPreviewCanvas(offscreenCanvas) {
+        return await offscreenCanvas.convertToBlob();
     }
 }
 

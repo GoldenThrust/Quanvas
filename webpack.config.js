@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 export default {
     entry: {
         index: './main.js',
-        "service-worker": "./service-worker.js"
+        "service-worker": "./service-worker.js",
     },
     output: {
         filename: '[name].js',

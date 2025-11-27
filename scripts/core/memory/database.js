@@ -291,7 +291,6 @@ export const dbOperations = {
     },
 
     async createPath(pathData) {
-        console.log(pathData);
         const path = {
             ...pathData,
             createdAt: new Date().toISOString()

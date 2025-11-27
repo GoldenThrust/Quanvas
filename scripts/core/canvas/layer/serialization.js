@@ -1,7 +1,6 @@
 export default class Serializer {
     static serialize(data) {
         const points = data.points;
-        console.log(points)
         const buffer = new ArrayBuffer(8 * points.length);
 
         const view = new Float32Array(buffer);
@@ -23,8 +22,6 @@ export default class Serializer {
         const view = new Float32Array(buffer);
         const points = [];
         for (let i = 0; i < view.length; i += 2) {
-            // console.log('Unserializing point:', i / 2);
-            // console.table({ x: view[i], y: view[i + 1] });
             points.push({ x: view[i], y: view[i + 1] });
         }
 
