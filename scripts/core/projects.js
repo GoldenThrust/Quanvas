@@ -55,6 +55,7 @@ export default class Project {
                 thumbnail: await Canvas.createPreviewCanvas(Canvas.createCanvas(projectWidth, projectHeight))
             });
 
+            this.openProject(projectId, projectName);
         });
 
 
