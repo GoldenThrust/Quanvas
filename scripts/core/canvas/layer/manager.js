@@ -140,6 +140,9 @@ class LayerManager {
 
             for (const pathData of paths) {
                 const unserializedData = Serializer.unserialize(pathData);
+                    if (unserializedData.state.erase) {
+                        console.log(unserializedData)
+                    }
                 canvas.flushToPath(unserializedData);
             }
         }

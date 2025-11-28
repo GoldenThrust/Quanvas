@@ -27,6 +27,7 @@ export default class Canvas {
         this.pointsCount = 0;
         this.state = app.state;
         this.activeTool = null;
+        this.layer = null;
         this.painting = false;
 
         this.#addEventlistener();
@@ -104,9 +105,6 @@ export default class Canvas {
             this.reset()
         }
 
-        console.log(this.points.length % 3 === 0, this.pointsCount);
-        console.table(this.points);
-
         this.flush = true;
     }
 
@@ -125,7 +123,7 @@ export default class Canvas {
             this.previousPosition.x = points[Math.max(0, i - 1)].x;
             this.previousPosition.y = points[Math.max(0, i - 1)].y;
             this.points.push({ x: points[i].x, y: points[i].y });
-            this.draw(points[i].x, points[i].y, state, type);
+            this.draw(points[i].x, points[i].y, state, type, layerManager.getLayer(layerId));
         }
 
         layerManager.saveDrawingIn(layerId, this.path, points, state);
@@ -208,10 +206,11 @@ export default class Canvas {
         }
     }
 
-    draw(x, y, state = null, activeTool = null) {
+    draw(x, y, state = null, activeToolId = null, layer = null) {
         app.isDirty = true;
         this.state = state ?? app.state;
-        this.activeTool = activeTool ?? toolsManager.activeToolId;
+        this.activeTool = activeToolId ?? toolsManager.activeToolId;
+        this.layer = layer ?? layerManager.getActiveLayer();
 
         const drawGPath = ['P', 'L', 'K'].includes(this.activeTool[0]);
         if (drawGPath)
@@ -412,7 +411,7 @@ export default class Canvas {
 
 
     #eraser(x, y) {
-        const layer = layerManager.getActiveLayer();
+        const layer = this.layer;
         const dX = this.previousPosition.x - x;
         const dY = this.previousPosition.y - y;
         const radius = Math.hypot(dX, dY);
