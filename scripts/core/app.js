@@ -66,7 +66,7 @@ class APPManager {
             this.addKeyBind(id, cb);
         })
 
-        toolsManager.selectTool('P-pen');
+        toolsManager.selectTool('L-line');
 
         const projectId = Database.getCurrentProjectID();
         if (!projectId) return;
@@ -172,11 +172,11 @@ class APPManager {
             }
         })
 
-        addEventListener("beforeunload", (e) => {
-            this.#save();
-            e.preventDefault();
-            if (!this.isDirty) return;
-        });
+        // addEventListener("beforeunload", (e) => {
+        //     if (!this.isDirty) return;
+        //     this.#save();
+        //     e.preventDefault();
+        // });
 
         addEventListener("visibilitychange", () => {
             if (document.visibilityState === "hidden") {

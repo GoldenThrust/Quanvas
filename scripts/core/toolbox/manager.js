@@ -7,7 +7,7 @@ const toolsMenuElem = document.getElementById('toolsmenu');
 class ToolBoxManager {
     constructor() {
         ('Tool Manager')
-        this.activeToolId = 'P-pen';
+        this.activeToolId = 'L-line';
         this.#addEventListener();
     }
 

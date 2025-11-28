@@ -88,7 +88,8 @@ export default class Canvas {
         this.pointsCount++;
 
         if (['K', 'L'].includes(this.activeTool[0]) && this.flush) {
-            this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
+            if (!flush)
+                this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
             this.#createCurve();
             this.flush = false;
         }
@@ -120,6 +121,7 @@ export default class Canvas {
 
             this.previousPosition.x = points[Math.max(0, i - 1)].x;
             this.previousPosition.y = points[Math.max(0, i - 1)].y;
+            this.points.push({ x: points[i].x, y: points[i].y });
             this.draw(points[i].x, points[i].y, state, type);
         }
 
@@ -387,6 +389,7 @@ export default class Canvas {
 
         this.ctx.bezierCurveTo?.(path[count - 2].x, path[count - 2].y, path[count - 1].x, path[count - 1].y, x, y);
     }
+
 
     #quadratic(x, y) {
         this.#drawline();
