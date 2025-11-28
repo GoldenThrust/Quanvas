@@ -88,9 +88,8 @@ export default class Canvas {
         this.draw(this.previousPosition.x, this.previousPosition.y);
         this.pointsCount++;
 
-        if (['K', 'L'].includes(this.activeTool[0]) && this.flush) {
-            if (!flush)
-                this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
+        if (['K', 'L'].includes(this.activeTool[0]) && this.flush && !flush) {
+            this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
             this.#createCurve();
             this.flush = false;
         }
@@ -104,6 +103,9 @@ export default class Canvas {
 
             this.reset()
         }
+
+        console.log(this.points.length % 3 === 0, this.pointsCount);
+        console.table(this.points);
 
         this.flush = true;
     }
@@ -202,7 +204,6 @@ export default class Canvas {
             this.ctx.moveTo(this.points[0].x, this.points[0].y);
             this.path.moveTo(this.points[0].x, this.points[0].y);
         } else {
-            this.#createCurve();
             this.#moveToInitialPosition(false);
         }
     }
@@ -362,9 +363,6 @@ export default class Canvas {
                 this.path?.arcTo?.(cp.x, cp.y, p2.x, p2.y, radius);
             else
                 this.path?.lineTo(cp.x, cp.y);
-            this.ctx.circle(p.x, p.y, 'red', `${i} x:${p.x.toFixed(0)} y:${p.y.toFixed(0)}`);
-            this.ctx.circle(cp.x, cp.y, 'blue', `${i} x:${cp.x.toFixed(0)} y:${cp.y.toFixed(0)}`);
-            this.ctx.circle(p2.x, p2.y, 'yellow', `${i} x:${p2.x.toFixed(0)} y:${p2.y.toFixed(0)}`);
         }
 
         this.ctx.lineTo(x, y);
@@ -377,29 +375,21 @@ export default class Canvas {
 
         const handle = this.#computeHandle(this.points?.[count - 3], this.points?.[count - 6], { x, y });
 
-        if (handle) {
+        if (handle && !this.painting) {
             const { prev, next } = handle;
             this.points[count - 4] = prev;
             this.points[count - 2] = next;
         }
 
-        const path = this.points;
-
         for (let i = 1; i < count - 2; i += 3) {
-            const cp1 = path[i];
-            const cp2 = path[i + 1];
-            const p = path[i + 2];
+            const cp1 = this.points[i];
+            const cp2 = this.points[i + 1];
+            const p = this.points[i + 2];
             this.ctx.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
             this.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
-            this.ctx.circle(p.x, p.y, 'red', `${i} x:${p.x.toFixed(0)} y:${p.y.toFixed(0)}`);
-            this.ctx.circle(cp1.x, cp1.y, 'blue', `${i} x:${cp1.x.toFixed(0)} y:${cp1.y.toFixed(0)}`);
-            this.ctx.circle(cp2.x, cp2.y, 'yellow', `${i} x:${cp2.x.toFixed(0)} y:${cp2F.y.toFixed(0)}`);
         }
 
-        this.ctx.bezierCurveTo?.(path[count - 2].x, path[count - 2].y, path[count - 1].x, path[count - 1].y, x, y);
-        this.ctx.circle(path[count - 2].x, path[count - 2].y, 'red', `${i} x:${path[count - 2].x.toFixed(0)} y:${path[count - 2].y.toFixed(0)}`);
-        this.ctx.circle(path[count - 1].x, path[count - 1].y, 'blue', `${i} x:${path[count - 1].x.toFixed(0)} y:${path[count - 1].y.toFixed(0)}`);
-        this.ctx.circle(x, y, 'yellow', `${i} x:${x.toFixed(0)} y:${y.toFixed(0)}`);
+        this.ctx.bezierCurveTo?.(this.points[count - 2]?.x, this.points[count - 2]?.y, this.points[count - 1]?.x, this.points[count - 1]?.y, x, y);
     }
 
 

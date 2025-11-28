@@ -66,7 +66,7 @@ class APPManager {
             this.addKeyBind(id, cb);
         })
 
-        toolsManager.selectTool('K-quadratic');
+        toolsManager.selectTool('K-bezier');
 
         const projectId = Database.getCurrentProjectID();
         if (!projectId) return;
