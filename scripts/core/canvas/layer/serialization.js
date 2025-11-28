@@ -7,7 +7,6 @@ export default class Serializer {
 
         let i = 0;
         for (const point of points) {
-            console.log(point);
             view[i++] = point.x;
             view[i++] = point.y;
         }

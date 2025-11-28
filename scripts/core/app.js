@@ -66,7 +66,7 @@ class APPManager {
             this.addKeyBind(id, cb);
         })
 
-        toolsManager.selectTool('L-line');
+        toolsManager.selectTool('K-quadratic');
 
         const projectId = Database.getCurrentProjectID();
         if (!projectId) return;

@@ -82,6 +82,7 @@ export default class Canvas {
     }
 
     #flushDrawing(flush) {
+        console.log('flushing drawing');
         if (this.path === null) return;
 
         this.draw(this.previousPosition.x, this.previousPosition.y);
@@ -356,12 +357,16 @@ export default class Canvas {
             const p2 = points[i + 1];
             const radius = Math.hypot(p.x - cp.x, p.y - cp.y) / 4;
             this.ctx.arcTo(cp.x, cp.y, p2.x, p2.y, radius);
-            this.path?.arcTo?.(cp.x, cp.y, p2.x, p2.y, radius);
-
+            if (count !== i + 1)
+                this.path?.arcTo?.(cp.x, cp.y, p2.x, p2.y, radius);
+            else
+                this.path?.lineTo(cp.x, cp.y);
+            this.ctx.circle(p.x, p.y, 'red', `${i} x:${p.x.toFixed(0)} y:${p.y.toFixed(0)}`);
+            this.ctx.circle(cp.x, cp.y, 'blue', `${i} x:${cp.x.toFixed(0)} y:${cp.y.toFixed(0)}`);
+            this.ctx.circle(p2.x, p2.y, 'yellow', `${i} x:${p2.x.toFixed(0)} y:${p2.y.toFixed(0)}`);
         }
 
         this.ctx.lineTo(x, y);
-        // this.path?.lineTo?.(x, y);
     }
 
     #bezier(x, y) {
@@ -385,9 +390,15 @@ export default class Canvas {
             const p = path[i + 2];
             this.ctx.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
             this.path?.bezierCurveTo?.(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
+            this.ctx.circle(p.x, p.y, 'red', `${i} x:${p.x.toFixed(0)} y:${p.y.toFixed(0)}`);
+            this.ctx.circle(cp1.x, cp1.y, 'blue', `${i} x:${cp1.x.toFixed(0)} y:${cp1.y.toFixed(0)}`);
+            this.ctx.circle(cp2.x, cp2.y, 'yellow', `${i} x:${cp2.x.toFixed(0)} y:${cp2F.y.toFixed(0)}`);
         }
 
         this.ctx.bezierCurveTo?.(path[count - 2].x, path[count - 2].y, path[count - 1].x, path[count - 1].y, x, y);
+        this.ctx.circle(path[count - 2].x, path[count - 2].y, 'red', `${i} x:${path[count - 2].x.toFixed(0)} y:${path[count - 2].y.toFixed(0)}`);
+        this.ctx.circle(path[count - 1].x, path[count - 1].y, 'blue', `${i} x:${path[count - 1].x.toFixed(0)} y:${path[count - 1].y.toFixed(0)}`);
+        this.ctx.circle(x, y, 'yellow', `${i} x:${x.toFixed(0)} y:${y.toFixed(0)}`);
     }
 
 
