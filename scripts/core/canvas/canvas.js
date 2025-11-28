@@ -155,8 +155,9 @@ export default class Canvas {
     }
 
 
-    #moveToInitialPosition() {
-        if (!this.points.length) this.points.push({ x: this.initialPosition.x, y: this.initialPosition.y });
+    #moveToInitialPosition(addPoint = true) {
+        if (!this.points.length && addPoint)
+            this.points.push({ x: this.initialPosition.x, y: this.initialPosition.y });
         this.#clear();
         this.createPath();
         this.ctx.moveTo(this.initialPosition.x, this.initialPosition.y)
@@ -202,7 +203,7 @@ export default class Canvas {
             this.path.moveTo(this.points[0].x, this.points[0].y);
         } else {
             this.#createCurve();
-            this.#moveToInitialPosition();
+            this.#moveToInitialPosition(false);
         }
     }
 
@@ -404,17 +405,19 @@ export default class Canvas {
 
     #quadratic(x, y) {
         this.#drawline();
-        const path = this.points;
-        const count = path.length - 1;
+        const count = this.points.length - 1;
         for (let i = 1; i < count; i += 2) {
-            const p = path[i + 1];
-            const cp = path[i];
+            const p = this.points[i + 1];
+            const cp = this.points[i];
             this.ctx.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
             this.path?.quadraticCurveTo?.(cp.x, cp.y, p.x, p.y);
             this.ctx.circle(p.x, p.y, p.cp ? 'purple' : 'maroon')
         }
 
-        this.ctx.quadraticCurveTo?.(path[count].x, path[count].y, x, y);
+
+        if (this.points[count]?.x) {
+            this.ctx.quadraticCurveTo?.(this.points[count].x, this.points[count].y, x, y);
+        }
     }
 
 
