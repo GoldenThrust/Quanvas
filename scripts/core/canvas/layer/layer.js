@@ -1,7 +1,7 @@
 import { CANVAS_PROP } from "../../../shared/constants.js";
 import { rootElem } from "../../../shared/domElem.js";
-import app from "../../app.js";
 import { dbOperations } from "../../memory/database.js";
+import layerManager from "./manager.js";
 
 export default class Layer {
     constructor(id, name, order, layerElem) {
@@ -19,9 +19,8 @@ export default class Layer {
 
         this.layerCanvas = this.canvas.cloneNode();
         this.canvas.dataset.id = id;
-        this.layerCanvas.style.zIndex = order;
+        this.canvas.style.zIndex = order;
         this.layerCanvas.dataset.id = id;
-
 
         rootElem.appendChild(this.canvas);
 
@@ -50,7 +49,7 @@ export default class Layer {
     #addEventListener() {
         this.nameElem.addEventListener('blur', () => {
             this.name = this.nameElem.innerText ?? 'Unnamed';
-            app.layerManager.renameLayer(this.id, this.name);
+            layerManager.renameLayer(this.id, this.name);
         });
 
         this.nameElem.addEventListener('keydown', (e) => {

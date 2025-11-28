@@ -1,4 +1,4 @@
-class undoRedoManager {
+class HistoryManager {
     constructor() {
         this.history = [];
         this.redoStack = [];
@@ -28,3 +28,6 @@ class undoRedoManager {
         this.redoStack = [];
     }
 }
+
+const history = new HistoryManager();
+export default history;

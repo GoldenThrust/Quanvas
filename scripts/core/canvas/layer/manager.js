@@ -6,6 +6,7 @@ import Serializer from './serialization.js';
 import { v4 as uuid } from 'uuid';
 import Database, { dbOperations } from '../../memory/database.js';
 import { canvas } from '../canvas.js';
+import { random } from '../../../utils/random.js';
 
 const layersElem = document.getElementById('layers');
 const addLayerElem = document.getElementById('addlayer');
@@ -16,6 +17,7 @@ class LayerManager {
         this.layers = new Map();
         this.activeLayerId = null;
         this.focusedLayerId = null;
+        this.lastLayerId = null;
         this.project = null;
         this.#addEventListener();
     }
@@ -75,7 +77,7 @@ class LayerManager {
         if (id === null || name === null || order === null) save = true;
         id = id ?? uuid();
         order = order ?? this.layers.size + 1;
-        name = name ?? `Layer ${order}`;
+        name = name ?? `Layer ${order}${String.fromCharCode(random(97, 123))}`;
 
         const layerDivElem = document.createElement('div');
         layerDivElem.classList.add('layer');
@@ -88,6 +90,7 @@ class LayerManager {
         this.layers.set(id, layer);
 
         layerDivElem.addEventListener('click', e => {
+            if (e.target.tagName === 'SPAN') return;
             this.setActiveLayer(e.currentTarget.dataset.id);
             this.focusedLayerId = e.currentTarget.dataset.id;
             e.currentTarget.focus();
@@ -111,7 +114,6 @@ class LayerManager {
                     this.setActiveLayer(e.currentTarget.dataset.id);
                     break;
                 case 'Delete':
-                case 'Backspace':
                     e.preventDefault();
                     this.removeLayer();
                     break;
@@ -140,9 +142,6 @@ class LayerManager {
 
             for (const pathData of paths) {
                 const unserializedData = Serializer.unserialize(pathData);
-                    if (unserializedData.state.erase) {
-                        console.log(unserializedData)
-                    }
                 canvas.flushToPath(unserializedData);
             }
         }
@@ -171,14 +170,15 @@ class LayerManager {
         } else {
             for (let i = elements.length - toOrder; i < elements.length - fromOrder + 1; i++) {
                 const order = Number(elements[i].dataset.order);
+                const canvas = this.layers.get(elements[i].dataset.id)?.canvas;
                 let pos;
 
                 if (order === fromOrder) pos = toOrder;
                 else pos = order - 1;
 
                 elements[i].dataset.order = pos;
-
-                this.layers.get(elements[i].dataset.id).canvas.style.zIndex = pos;
+                if (canvas)
+                    canvas.style.zIndex = pos;
                 await dbOperations.updateLayer(elements[i].dataset.id, {
                     order: pos
                 });
@@ -195,7 +195,6 @@ class LayerManager {
     }
 
     async saveDrawing(path, points, state) {
-        // console.clear();
         const layer = this.getActiveLayer();
 
         if (layer == null) {
@@ -261,6 +260,8 @@ class LayerManager {
 
         try {
             await dbOperations.deleteLayer(id);
+            const order = layer.layer.dataset.order;
+            this.reOrder(order, this.layers.size)
 
             layer.layer.remove();
             layer.canvas.remove();
