@@ -3,6 +3,7 @@ import { rootControllerElem, rootElem } from "../shared/domElem.js";
 import Canvas, { canvas } from "./canvas/canvas.js";
 import layerManager from "./canvas/layer/manager.js";
 import Database, { dbOperations } from "./memory/database.js";
+import history from "./memory/history.js";
 import { project } from "./projects.js";
 import toolsManager from "./toolbox/manager.js";
 
@@ -28,6 +29,7 @@ class APPManager {
         this.lastMousePos = { x: 0, y: 0 };
         this.isSpacePressed = false;
         this.isDirty = false;
+        this.unloading = true;
 
         this.keybinding = new Map();
 
@@ -59,7 +61,21 @@ class APPManager {
             'ctrl+1': () => this.fitToScreen(),
             'ctrl+=': () => this.zoom(1.25),
             'ctrl+-': () => this.zoom(0.8),
-            'ctrl+s': async () => await this.#save(true)
+            'ctrl+s': async () => await this.#save(true),
+            'ctrl+z': async () => {
+                await history.undo();
+                console.log('History');
+                console.table(history.history);
+                console.log('Redo');
+                console.table(history.redoStack);
+            },
+            'ctrl+shift+z': async () => {
+                await history.redo();
+                console.log('History');
+                console.table(history.history);
+                console.log('Redo');
+                console.table(history.redoStack);
+            }
         }
 
         Object.entries(defaultKeyBind).forEach(([id, cb]) => {
@@ -82,11 +98,12 @@ class APPManager {
 
         const layers = (await dbOperations.getLayersByProject(projectId)).sort((a, b) => a.order - b.order);
 
-        layers?.forEach((layer) => {
-            layerManager.createLayer(layer.id, layer.name, layer.order);
+        await layers?.forEach(async (layer) => {
+            await layerManager.createLayer({ id: layer.id, name: layer.name, order: layer.order, skipHistory: true });
         });
+
         if (layerManager.layers.size === 0) {
-            layerManager.createLayer();
+            await layerManager.createLayer({ skipHistory: true });
         }
 
         const box = rootControllerElem.getBoundingClientRect();

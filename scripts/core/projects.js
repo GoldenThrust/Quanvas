@@ -129,19 +129,16 @@ export default class Project {
         }
 
         // Load existing projects on startup
-        dbOperations.getAllProjects().then(projects => {
-            projects.forEach(project => {
-                const url = URL.createObjectURL(project.thumbnail);
-                const projectElement = this.createProjectElement(project.id, project.name, url);
-                projectsContainer.appendChild(projectElement);
-                setTimeout(() => {
-                    URL.revokeObjectURL(url);
-                }, 100)
-            });
-        }).catch(err => {
-            console.error('Error loading projects:', err);
-        });
-
+        const projects = await dbOperations.getAllProjects();
+        projects.forEach(project => {
+            const url = URL.createObjectURL(project.thumbnail);
+            const projectElement = this.createProjectElement(project.id, project.name, url);
+            projectsContainer.appendChild(projectElement);
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+            }, 100)
+        })
+        app.unloading = false;
     }
 
     createProjectElement(id, name, imgSrc) {

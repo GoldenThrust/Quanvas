@@ -28,7 +28,6 @@ export default class Canvas {
         this.state = app.state;
         this.activeTool = null;
         this.layer = null;
-        this.painting = false;
 
         this.#addEventlistener();
     }
@@ -79,7 +78,6 @@ export default class Canvas {
         this.path = null;
         this.points = [];
         this.pointsCount = 0;
-        this.painting = false;
     }
 
     #flushDrawing(flush) {
@@ -110,8 +108,6 @@ export default class Canvas {
 
     flushToPath(data) {
         const { points, type, layerId, state } = data;
-
-        this.painting = true;
 
         this.createPath();
         for (let i = 0; i < points.length; i++) {
@@ -374,7 +370,7 @@ export default class Canvas {
 
         const handle = this.#computeHandle(this.points?.[count - 3], this.points?.[count - 6], { x, y });
 
-        if (handle && !this.painting) {
+        if (handle && !app.unloading) {
             const { prev, next } = handle;
             this.points[count - 4] = prev;
             this.points[count - 2] = next;

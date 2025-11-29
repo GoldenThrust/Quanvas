@@ -7,10 +7,11 @@ import { v4 as uuid } from 'uuid';
 import Database, { dbOperations } from '../../memory/database.js';
 import { canvas } from '../canvas.js';
 import { random } from '../../../utils/random.js';
+import history from '../../memory/history.js';
 
 const layersElem = document.getElementById('layers');
 const addLayerElem = document.getElementById('addlayer');
-
+const sortPos = [0, 0];
 
 class LayerManager {
     constructor() {
@@ -23,9 +24,8 @@ class LayerManager {
     }
 
     #addEventListener() {
-        const sortPos = [0, 0];
         addLayerElem.addEventListener('click', _ => {
-            this.createLayer();
+            this.createLayer({});
         });
 
         layersElem.addEventListener('dragstart', (e) => {
@@ -49,19 +49,14 @@ class LayerManager {
             const afterElement = this.#getDragAfterElement(e.clientY);
             const draggable = layersElem.querySelector(".dragging");
             if (!draggable) return;
-            if (afterElement == null) {
-                const dCanvas = this.layers.get(draggable.dataset.id);
-                layersElem.appendChild(dCanvas.layer);
-                // rootElem.appendChild(dCanvas.canvas);
-                sortPos[1] = 0;
-            } else {
-                const dCanvas = this.layers.get(draggable.dataset.id);
-                const aCanvas = this.layers.get(afterElement.dataset.id);
-                layersElem.insertBefore(dCanvas.layer, aCanvas.layer);
-                // rootElem.insertBefore(dCanvas.canvas, aCanvas.canvas);
-                sortPos[0] = Number(dCanvas.layer.dataset.order);
-                sortPos[1] = Number(aCanvas.layer.dataset.order);
-            }
+            this.changePosition(draggable, afterElement)
+
+            history.updateHistory({
+                type: 'chanege-layer-pos',
+                layerId: this.activeLayerId,
+                dragElemId: draggable.dataset.id,
+                afterElemId: afterElement?.dataset?.id,
+            });
         });
     }
 
@@ -69,81 +64,108 @@ class LayerManager {
         this.#clearAll();
     }
 
-    async createLayer(id = null, name = null, order = null) {
-        const projectId = Database.getCurrentProjectID();
-        if (!projectId) return;
+    async createLayer({ id = null, name = null, order = null, skipHistory = false }) {
+        try {
+            const projectId = Database.getCurrentProjectID();
+            if (!projectId) return;
 
-        let save = false;
-        if (id === null || name === null || order === null) save = true;
-        id = id ?? uuid();
-        order = order ?? this.layers.size + 1;
-        name = name ?? `Layer ${order}${String.fromCharCode(random(97, 123))}`;
+            let save = false;
+            if (id === null || name === null || order === null) save = true;
+            id = id ?? uuid();
+            order = order ?? this.layers.size + 1;
+            name = name ?? `Layer ${order}${String.fromCharCode(random(97, 123))}`;
 
-        const layerDivElem = document.createElement('div');
-        layerDivElem.classList.add('layer');
-        layerDivElem.draggable = true;
-        layerDivElem.tabIndex = 0; // Make div focusable
-        layerDivElem.dataset.id = id;
-        layerDivElem.dataset.order = order;
-        layersElem.prepend(layerDivElem);
-        const layer = new Layer(id, name, order, layerDivElem);
-        this.layers.set(id, layer);
+            const layerDivElem = document.createElement('div');
+            layerDivElem.classList.add('layer');
+            layerDivElem.draggable = true;
+            layerDivElem.tabIndex = 0; // Make div focusable
+            layerDivElem.dataset.id = id;
+            layerDivElem.dataset.order = order;
+            layersElem.prepend(layerDivElem);
+            const layer = new Layer(id, name, order, layerDivElem);
+            this.layers.set(id, layer);
 
-        layerDivElem.addEventListener('click', e => {
-            if (e.target.tagName === 'SPAN') return;
-            this.setActiveLayer(e.currentTarget.dataset.id);
-            this.focusedLayerId = e.currentTarget.dataset.id;
-            e.currentTarget.focus();
-        });
+            layerDivElem.addEventListener('click', e => {
+                if (e.target.tagName === 'SPAN') return;
+                this.setActiveLayer(e.currentTarget.dataset.id);
+                this.focusedLayerId = e.currentTarget.dataset.id;
+                e.currentTarget.focus();
+            });
 
-        layerDivElem.addEventListener('focus', e => {
-            this.focusedLayerId = e.currentTarget.dataset.id;
-        });
+            layerDivElem.addEventListener('focus', e => {
+                this.focusedLayerId = e.currentTarget.dataset.id;
+            });
 
-        layerDivElem.addEventListener('blur', e => {
-            if (!layersElem.contains(e.relatedTarget)) {
-                this.focusedLayerId = null;
+            layerDivElem.addEventListener('blur', e => {
+                if (!layersElem.contains(e.relatedTarget)) {
+                    this.focusedLayerId = null;
+                }
+            });
+
+            layerDivElem.addEventListener('keydown', e => {
+                switch (e.key) {
+                    case 'Enter':
+                    case ' ':
+                        e.preventDefault();
+                        this.setActiveLayer(e.currentTarget.dataset.id);
+                        break;
+                    case 'Delete':
+                        e.preventDefault();
+                        this.removeLayer();
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.#focusAdjacentLayer(e.currentTarget, -1);
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.#focusAdjacentLayer(e.currentTarget, 1);
+                        break;
+                }
+            });
+
+
+            if (save) {
+                await dbOperations.createLayer({
+                    id: id,
+                    projectId,
+                    name: layer.name,
+                    order
+                })
+            } else {
+                const paths = await dbOperations.getPathsByLayer(id);
+
+                for (const pathData of paths) {
+                    const unserializedData = Serializer.unserialize(pathData);
+                    canvas.flushToPath(unserializedData);
+                }
             }
-        });
 
-        layerDivElem.addEventListener('keydown', e => {
-            switch (e.key) {
-                case 'Enter':
-                case ' ':
-                    e.preventDefault();
-                    this.setActiveLayer(e.currentTarget.dataset.id);
-                    break;
-                case 'Delete':
-                    e.preventDefault();
-                    this.removeLayer();
-                    break;
-                case 'ArrowUp':
-                    e.preventDefault();
-                    this.#focusAdjacentLayer(e.currentTarget, -1);
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    this.#focusAdjacentLayer(e.currentTarget, 1);
-                    break;
+            if (!skipHistory) {
+                history.updateHistory({
+                    type: 'create-layer',
+                    layerId: id,
+                    activeLayerId: this.activeLayerId,
+                });
             }
-        });
 
-        this.setActiveLayer(id);
+            this.setActiveLayer(id, true);
+        } catch (error) {
+            console.error('Error creating layer:', error);
+        }
+    }
 
-        if (save) {
-            await dbOperations.createLayer({
-                id: id,
-                projectId,
-                name: layer.name,
-                order
-            })
+    changePosition(draggable, afterElement) {
+        if (afterElement == null) {
+            const dCanvas = this.layers.get(draggable.dataset.id);
+            layersElem.appendChild(dCanvas.layer);
+            sortPos[1] = 0;
         } else {
-            const paths = await dbOperations.getPathsByLayer(id);
-
-            for (const pathData of paths) {
-                const unserializedData = Serializer.unserialize(pathData);
-                canvas.flushToPath(unserializedData);
-            }
+            const dCanvas = this.layers.get(draggable.dataset.id);
+            const aCanvas = this.layers.get(afterElement.dataset.id);
+            layersElem.insertBefore(dCanvas.layer, aCanvas.layer);
+            sortPos[0] = Number(dCanvas.layer.dataset.order);
+            sortPos[1] = Number(aCanvas.layer.dataset.order);
         }
     }
 
@@ -212,8 +234,14 @@ class LayerManager {
 
         layer.drawPath(path, state.fill, state.clip);
 
-        await dbOperations.createPath(data)
+        const res = await dbOperations.createPath(data);
         layer.addData(path, data);
+
+        history.updateHistory({
+            type: 'save-drawing',
+            layerId: this.activeLayerId,
+            pathId: res.id
+        })
     }
 
     async saveDrawingIn(id, path, points, state) {
@@ -236,7 +264,7 @@ class LayerManager {
         layer.addData(path, data);
     }
 
-    setActiveLayer(id) {
+    setActiveLayer(id, skipHistory = false) {
         const layer = this.layers.get(this.activeLayerId);
         layer?.layer?.classList?.remove('selectedLayer');
 
@@ -244,10 +272,22 @@ class LayerManager {
         newLayer?.layer?.classList?.add('selectedLayer');
 
         this.activeLayerId = id;
+
+        if (skipHistory) return;
+        history.updateHistory({
+            type: 'set-active-layer',
+            layerId: this.activeLayerId,
+        })
     }
 
     renameLayer(id, name) {
         const layer = this.layers.get(id);
+        history.updateHistory({
+            type: 'rename-layer',
+            layerId: id,
+            oldName: layer.name
+        })
+
         layer.setName(id, name);
     }
 
@@ -277,9 +317,17 @@ class LayerManager {
                     this.setActiveLayer(firstLayer.id);
                 }
             }
+
+            history.updateHistory({
+                type: 'remove-layer',
+                layerId: id,
+                name: layer.name,
+                order: order
+            })
         } catch (error) {
             console.error('Error removing layer:', error);
         }
+
     }
 
     #clearAll() {
