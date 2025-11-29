@@ -293,8 +293,8 @@ class LayerManager {
         layer.setName(id, name);
     }
 
-    async removeLayer(layerId, skipHistory = false) {
-        if (!this.focusedLayerId) return;
+    async removeLayer(layerId = null, skipHistory = false) {
+        if (!this.focusedLayerId && !layerId) return;
         const id = layerId ?? this.focusedLayerId;
 
         const layer = this.layers.get(id);
@@ -320,11 +320,12 @@ class LayerManager {
                 }
             }
 
-            if (layerId === null)
-                history.history.pop()
 
+            console.log('Remove layer', id, layer);
             if (skipHistory) return;
 
+            if (layerId === null)
+                history.history.pop()
             history.updateHistory({
                 type: 'remove-layer',
                 layerId: id,

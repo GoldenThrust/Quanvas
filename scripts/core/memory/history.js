@@ -68,11 +68,7 @@ class HistoryManager {
                 await layerManager.createLayer({ id: layerId, name, order, skipHistory: true });
                 const elements = Array.from(layersElem.children);
 
-                const element = elements.find(el => {
-                    return Number(el.dataset.order) + 1 === Number(order)
-                });
-                if (element)
-                    console.log('Found before element', element, 'for order', order, 'from elements', element, Number(element.dataset.order) - 1);
+                const element = elements.find(el => Math.min(Number(el.dataset.order) + 1, layerManager.layers.size) === Number(order));
 
                 layersElem.insertBefore(layerManager.getLayer(layerId).layer, element);
                 await layerManager.reOrder(layerManager.layers.size, order);
