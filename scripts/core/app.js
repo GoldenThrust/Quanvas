@@ -64,17 +64,17 @@ class APPManager {
             'ctrl+s': async () => await this.#save(true),
             'ctrl+z': async () => {
                 await history.undo();
-                console.log('History');
-                console.table(history.history);
-                console.log('Redo');
-                console.table(history.redoStack);
+                // console.log('History');
+                // console.table(history.history);
+                // console.log('Redo');
+                // console.table(history.redoStack);
             },
             'ctrl+shift+z': async () => {
                 await history.redo();
-                console.log('History');
-                console.table(history.history);
-                console.log('Redo');
-                console.table(history.redoStack);
+                // console.log('History');
+                // console.table(history.history);
+                // console.log('Redo');
+                // console.table(history.redoStack);
             }
         }
 

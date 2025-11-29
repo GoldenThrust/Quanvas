@@ -1,5 +1,5 @@
 import Layer from './layer.js';
-import { rootElem } from '../../../shared/domElem.js';
+import { layersElem, rootElem } from '../../../shared/domElem.js';
 import app from '../../app.js';
 import toolsManager from '../../toolbox/manager.js';
 import Serializer from './serialization.js';
@@ -9,7 +9,6 @@ import { canvas } from '../canvas.js';
 import { random } from '../../../utils/random.js';
 import history from '../../memory/history.js';
 
-const layersElem = document.getElementById('layers');
 const addLayerElem = document.getElementById('addlayer');
 const sortPos = [0, 0];
 
@@ -84,7 +83,7 @@ class LayerManager {
             this.layers.set(id, layer);
 
             layerDivElem.addEventListener('click', e => {
-                if (e.target.tagName === 'SPAN') return;
+                if (e.target.classList.contains('layer-name')) return;
                 this.setActiveLayer(e.currentTarget.dataset.id);
                 this.focusedLayerId = e.currentTarget.dataset.id;
                 e.currentTarget.focus();
@@ -109,7 +108,8 @@ class LayerManager {
                         break;
                     case 'Delete':
                         e.preventDefault();
-                        this.removeLayer();
+                        if (this.focusedLayerId === e.currentTarget.dataset.id && !e.target.classList.contains('layer-name'))
+                            this.removeLayer();
                         break;
                     case 'ArrowUp':
                         e.preventDefault();
@@ -176,7 +176,8 @@ class LayerManager {
                 const order = Number(elements[i].dataset.order);
                 let pos;
 
-                if (order === fromOrder) pos = toOrder + 1;
+                if (order === fromOrder)
+                    pos = toOrder + 1;
                 else
                     pos = order + 1;
 
@@ -194,8 +195,10 @@ class LayerManager {
                 const canvas = this.layers.get(elements[i].dataset.id)?.canvas;
                 let pos;
 
-                if (order === fromOrder) pos = toOrder;
-                else pos = order - 1;
+                if (order === fromOrder)
+                    pos = toOrder;
+                else
+                    pos = order - 1;
 
                 elements[i].dataset.order = pos;
                 if (canvas)
@@ -290,9 +293,9 @@ class LayerManager {
         layer.setName(id, name);
     }
 
-    async removeLayer() {
+    async removeLayer(layerId, skipHistory = false) {
         if (!this.focusedLayerId) return;
-        const id = this.focusedLayerId;
+        const id = layerId ?? this.focusedLayerId;
 
         const layer = this.layers.get(id);
         if (!layer) return;
@@ -313,15 +316,21 @@ class LayerManager {
                 this.activeLayerId = null;
                 const firstLayer = this.layers.values().next().value;
                 if (firstLayer) {
-                    this.setActiveLayer(firstLayer.id);
+                    this.setActiveLayer(firstLayer.id, true);
                 }
             }
+
+            if (layerId === null)
+                history.history.pop()
+
+            if (skipHistory) return;
 
             history.updateHistory({
                 type: 'remove-layer',
                 layerId: id,
                 name: layer.name,
-                order: order
+                order: order,
+                data: layer.data
             })
         } catch (error) {
             console.error('Error removing layer:', error);

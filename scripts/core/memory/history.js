@@ -3,6 +3,7 @@ import { dbOperations } from './database.js';
 import Serializer from '../canvas/layer/serialization.js';
 import { canvas } from '../canvas/canvas.js';
 import app from '../app.js';
+import { layersElem } from '../../shared/domElem.js';
 
 class HistoryManager {
     constructor() {
@@ -14,7 +15,6 @@ class HistoryManager {
         if (app.unloading) return;
         this.history.push(data);
         this.redoStack = [];
-        console.log('History updated', data);
     }
 
     async undo() {
@@ -64,14 +64,21 @@ class HistoryManager {
             }
 
             case 'remove-layer': {
-                const { layerId, name, order, paths } = entry;
-                await layerManager.createLayer({ id: layerId, name, order});
-                try {
-                    await dbOperations.createLayer({ id: layerId, projectId: localStorage.getItem('current-project'), name, order });
-                } catch (e) { }
+                const { layerId, name, order, data } = entry;
+                await layerManager.createLayer({ id: layerId, name, order, skipHistory: true });
+                const elements = Array.from(layersElem.children);
 
-                if (paths && paths.length) {
-                    for (const p of paths) {
+                const element = elements.find(el => {
+                    return Number(el.dataset.order) + 1 === Number(order)
+                });
+                if (element)
+                    console.log('Found before element', element, 'for order', order, 'from elements', element, Number(element.dataset.order) - 1);
+
+                layersElem.insertBefore(layerManager.getLayer(layerId).layer, element);
+                await layerManager.reOrder(layerManager.layers.size, order);
+
+                if (data && data.length) {
+                    for (const p of data) {
                         try { await dbOperations.createPath(p); } catch (e) { }
                         const unser = Serializer.unserialize(p);
                         canvas.flushToPath(unser);
@@ -131,19 +138,13 @@ class HistoryManager {
         switch (entry.type) {
             case 'create-layer': {
                 const { layerId, name, order } = entry;
-                await layerManager.createLayer({id: layerId, name, order, skipHistory: true });
+                await layerManager.createLayer({ id: layerId, name, order, skipHistory: true });
                 break;
             }
 
             case 'remove-layer': {
                 const id = entry.layerId;
-                const layer = layerManager.getLayer(id);
-                if (layer) {
-                    layer.layer.remove();
-                    layer.canvas.remove();
-                    layerManager.layers.delete(id);
-                }
-                try { await dbOperations.deleteLayer(id); } catch (e) { }
+                await layerManager.removeLayer(id, true);
                 break;
             }
 
