@@ -69,8 +69,6 @@ class LayerManager {
             const projectId = Database.getCurrentProjectID();
             if (!projectId) return;
 
-            let save = false;
-            if (id === null || name === null || order === null) save = true;
             id = id ?? uuid();
             order = order ?? this.layers.size + 1;
             name = name ?? `Layer ${order}${String.fromCharCode(random(97, 123))}`;
@@ -124,21 +122,20 @@ class LayerManager {
                 }
             });
 
+            const paths = await dbOperations.getPathsByLayer(id);
 
-            if (save) {
+            if (paths.length) {
+                for (const pathData of paths) {
+                    const unserializedData = Serializer.unserialize(pathData);
+                    canvas.flushToPath(unserializedData);
+                }
+            } else {
                 await dbOperations.createLayer({
                     id: id,
                     projectId,
                     name: layer.name,
                     order
                 })
-            } else {
-                const paths = await dbOperations.getPathsByLayer(id);
-
-                for (const pathData of paths) {
-                    const unserializedData = Serializer.unserialize(pathData);
-                    canvas.flushToPath(unserializedData);
-                }
             }
 
             if (!skipHistory) {
@@ -146,6 +143,8 @@ class LayerManager {
                     type: 'create-layer',
                     layerId: id,
                     activeLayerId: this.activeLayerId,
+                    name: layer.name,
+                    order
                 });
             }
 

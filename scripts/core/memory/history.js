@@ -14,6 +14,7 @@ class HistoryManager {
         if (app.unloading) return;
         this.history.push(data);
         this.redoStack = [];
+        console.log('History updated', data);
     }
 
     async undo() {
@@ -130,8 +131,7 @@ class HistoryManager {
         switch (entry.type) {
             case 'create-layer': {
                 const { layerId, name, order } = entry;
-                await layerManager.createLayer({id: layerId, name, order});
-                try { await dbOperations.createLayer({ id: layerId, projectId: localStorage.getItem('current-project'), name, order }); } catch (e) { }
+                await layerManager.createLayer({id: layerId, name, order, skipHistory: true });
                 break;
             }
 
