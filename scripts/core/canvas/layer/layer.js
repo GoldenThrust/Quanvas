@@ -13,7 +13,7 @@ export default class Layer {
         this.id = id;
         this.name = name;
         this.isDrawing = false;
-        this.data = new Set();
+        this.data = new Map();
 
         this.canvas = document.createElement('canvas');
 
@@ -77,12 +77,16 @@ export default class Layer {
 
     addData(path, data) {
         data['path'] = path;
-        this.data.add(data);
+        this.data.set(data.id, data);
     }
 
     clear() {
         this.canvas.width = CANVAS_PROP.width;
         this.canvas.height = CANVAS_PROP.height;
+    }
+
+    clearData() {
+        this.data.clear();
     }
 
     setName(id, name) {

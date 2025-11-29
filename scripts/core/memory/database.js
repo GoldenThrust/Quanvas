@@ -174,7 +174,6 @@ const storeDefinitions = [
     {
         name: 'paths',
         keyPath: 'id',
-        autoIncrement: true,
         indexes: [
             { name: 'layerId', keyPath: 'layerId', unique: false },
             { name: 'projectId', keyPath: 'projectId', unique: false },

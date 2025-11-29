@@ -51,7 +51,7 @@ class LayerManager {
             this.changePosition(draggable, afterElement)
 
             history.updateHistory({
-                type: 'chanege-layer-pos',
+                type: 'change-layer-pos',
                 layerId: this.activeLayerId,
                 dragElemId: draggable.dataset.id,
                 afterElemId: afterElement?.dataset?.id,
@@ -68,7 +68,7 @@ class LayerManager {
             const projectId = Database.getCurrentProjectID();
             if (!projectId) return;
 
-            id = id ?? uuid();
+            id = id ?? `layer-${uuid()}`;
             order = order ?? this.layers.size + 1;
             name = name ?? `Layer ${order}${String.fromCharCode(random(97, 123))}`;
 
@@ -227,6 +227,7 @@ class LayerManager {
         }
 
         const data = Serializer.serialize({
+            id: `path-${uuid()}`,
             points,
             state: app.state,
             type: toolsManager.activeToolId,
@@ -236,13 +237,14 @@ class LayerManager {
 
         layer.drawPath(path, state.fill, state.clip);
 
-        const res = await dbOperations.createPath(data);
+        const id = await dbOperations.createPath(data);
         layer.addData(path, data);
 
         history.updateHistory({
             type: 'save-drawing',
             layerId: this.activeLayerId,
-            pathId: res.id
+            pathId: data['id'],
+            path
         })
     }
 
@@ -255,6 +257,7 @@ class LayerManager {
         }
 
         const data = Serializer.serialize({
+            id,
             points,
             state: app.state,
             type: toolsManager.activeToolId,
@@ -321,7 +324,6 @@ class LayerManager {
             }
 
 
-            console.log('Remove layer', id, layer);
             if (skipHistory) return;
 
             if (layerId === null)

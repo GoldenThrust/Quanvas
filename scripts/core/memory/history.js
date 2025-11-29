@@ -74,7 +74,7 @@ class HistoryManager {
                 await layerManager.reOrder(layerManager.layers.size, order);
 
                 if (data && data.length) {
-                    for (const p of data) {
+                    for (const [_, p] of data) {
                         try { await dbOperations.createPath(p); } catch (e) { }
                         const unser = Serializer.unserialize(p);
                         canvas.flushToPath(unser);
@@ -92,6 +92,7 @@ class HistoryManager {
                 const layer = layerManager.getLayer(layerId);
                 if (layer) {
                     layer.clear();
+                    layer.clearData();
                     const paths = await dbOperations.getPathsByLayer(layerId);
                     for (const p of paths) {
                         const unser = Serializer.unserialize(p);
@@ -114,8 +115,7 @@ class HistoryManager {
                 break;
             }
 
-            case 'change-layer-pos':
-            case 'chanege-layer-pos': {
+            case 'change-layer-pos': {
                 const { fromOrder, toOrder } = entry;
                 if (typeof fromOrder === 'number' && typeof toOrder === 'number') {
                     await layerManager.reOrder(toOrder, fromOrder);

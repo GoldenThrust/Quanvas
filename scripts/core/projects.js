@@ -39,7 +39,7 @@ export default class Project {
             const projectWidth = document.getElementById('projectWidth').value;
             const projectHeight = document.getElementById('projectHeight').value;
 
-            const projectId = uuid();
+            const projectId = `project-${uuid()}`;
             const thumbnail = await Canvas.createPreviewCanvas(Canvas.createCanvas(projectWidth, projectHeight));
             const url = URL.createObjectURL(thumbnail);
             const newProject = this.createProjectElement(projectId, projectName, url);;
