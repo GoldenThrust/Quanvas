@@ -296,13 +296,22 @@ class LayerManager {
 
     renameLayer(id, name) {
         const layer = this.layers.get(id);
+        if (!layer) return;
+        if (layer.name === name) return;
+
+        const lastHistoryEntry = history.history[history.history.length - 1];
+
+        if (lastHistoryEntry?.type === 'set-active-layer')
+            history.history.pop();
+
         history.updateHistory({
             type: 'rename-layer',
             layerId: id,
-            oldName: layer.name
+            oldName: layer.name,
+            newName: name
         })
 
-        layer.setName(id, name);
+        layer.setName(id, !name.trim() ? layer.name : name);
     }
 
     async removeLayer(layerId = null, skipHistory = false) {

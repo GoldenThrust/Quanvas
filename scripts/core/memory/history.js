@@ -73,7 +73,7 @@ class HistoryManager {
 
                 layersElem.insertBefore(layerManager.getLayer(layerId).layer, element);
                 await layerManager.reOrder(layerManager.layers.size, order);
-                
+
                 if (data && data.size) {
                     for (const [_, p] of data) {
                         try { await dbOperations.createPath(p); } catch (e) { }
@@ -113,7 +113,8 @@ class HistoryManager {
             }
 
             case 'rename-layer': {
-                const { layerId, oldName } = entry;
+                const { layerId, newName, oldName } = entry;
+                console.log('Undo rename-layer to', oldName, 'for', layerId, 'from', newName);
                 const layer = layerManager.getLayer(layerId);
                 if (layer) layer.setName(layerId, oldName);
                 break;
@@ -149,7 +150,7 @@ class HistoryManager {
             }
 
             case 'save-drawing': {
-                const data  = entry.data;
+                const data = entry.data;
                 if (data) {
                     try {
                         await dbOperations.createPath(data);
@@ -157,7 +158,7 @@ class HistoryManager {
                         canvas.flushToPath(unser);
                     } catch (e) {
                         console.error(e);
-                     }
+                    }
                 }
                 break;
             }
@@ -169,8 +170,9 @@ class HistoryManager {
             }
 
             case 'rename-layer': {
-                const { layerId, newName } = entry;
+                const { layerId, newName, oldName } = entry;
                 const layer = layerManager.getLayer(layerId);
+                console.log('Redo rename-layer to', newName, 'for', layerId, 'from', oldName);
                 if (layer) layer.setName(layerId, newName);
                 break;
             }

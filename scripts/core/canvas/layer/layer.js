@@ -48,8 +48,7 @@ export default class Layer {
 
     #addEventListener() {
         this.nameElem.addEventListener('blur', () => {
-            this.name = this.nameElem.innerText ?? 'Unnamed';
-            layerManager.renameLayer(this.id, this.name);
+            layerManager.renameLayer(this.id, this.nameElem.innerText);
         });
 
         this.nameElem.addEventListener('keydown', (e) => {
@@ -91,6 +90,7 @@ export default class Layer {
     }
 
     setName(id, name) {
+        console.log('Renaming layer', id, 'to', name);
         this.name = name;
         this.nameElem.innerText = this.name;
         dbOperations.updateLayer(id, {
