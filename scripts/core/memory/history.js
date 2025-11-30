@@ -121,10 +121,16 @@ class HistoryManager {
             }
 
             case 'change-layer-pos': {
-                const { fromOrder, toOrder } = entry;
-                if (typeof fromOrder === 'number' && typeof toOrder === 'number') {
-                    await layerManager.reOrder(toOrder, fromOrder);
-                }
+                let { fromPos, toPos } = entry;
+                fromPos = fromPos < toPos ? fromPos - 1 : fromPos;
+                toPos = fromPos < toPos ? toPos : toPos + 1;
+        
+                const fromElem = layerManager.getLayerByOrder(fromPos);
+                const toElem = layerManager.getLayerByOrder(toPos);
+
+                layerManager.changePosition(toElem, fromElem, false);
+                await layerManager.reOrder(toPos, fromPos);
+                layerManager.dragInfo['fromPos'] = 0;
                 break;
             }
 
@@ -177,12 +183,11 @@ class HistoryManager {
                 break;
             }
 
-            case 'change-layer-pos':
-            case 'chanege-layer-pos': {
-                const { fromOrder, toOrder } = entry;
-                if (typeof fromOrder === 'number' && typeof toOrder === 'number') {
-                    await layerManager.reOrder(fromOrder, toOrder);
-                }
+            case 'change-layer-pos': {
+                const { dragElem, afterElem } = entry;
+                layerManager.changePosition(dragElem, afterElem);
+                const { fromPos, toPos } = layerManager.dragInfo;
+                await layerManager.reOrder(fromPos, toPos);
                 break;
             }
 

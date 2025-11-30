@@ -10,7 +10,6 @@ import { random } from '../../../utils/random.js';
 import history from '../../memory/history.js';
 
 const addLayerElem = document.getElementById('addlayer');
-const sortPos = [0, 0];
 
 class LayerManager {
     constructor() {
@@ -19,6 +18,10 @@ class LayerManager {
         this.focusedLayerId = null;
         this.lastLayerId = null;
         this.project = null;
+        this.dragInfo = {
+            fromPos: 0,
+            toPos: 0,
+        }
         this.#addEventListener();
     }
 
@@ -37,10 +40,18 @@ class LayerManager {
             const layer = e.target.closest('.layer');
             if (!layer) return;
             layer.classList.remove('dragging');
-            if (sortPos[0])
-                this.reOrder(...sortPos);
+            if (this.dragInfo['fromPos']) {
+                this.reOrder(this.dragInfo['fromPos'], this.dragInfo['toPos']);
+                history.updateHistory({
+                    type: 'change-layer-pos',
+                    ...this.dragInfo
+                });
+            }
 
-            sortPos[0] = 0;
+            console.log(this.dragInfo);
+
+            this.dragInfo['fromPos'] = 0;
+
         });
 
         layersElem.addEventListener("dragover", (e) => {
@@ -49,13 +60,6 @@ class LayerManager {
             const draggable = layersElem.querySelector(".dragging");
             if (!draggable) return;
             this.changePosition(draggable, afterElement)
-
-            history.updateHistory({
-                type: 'change-layer-pos',
-                layerId: this.activeLayerId,
-                dragElemId: draggable.dataset.id,
-                afterElemId: afterElement?.dataset?.id,
-            });
         });
 
 
@@ -167,13 +171,17 @@ class LayerManager {
         if (afterElement == null) {
             const dCanvas = this.layers.get(draggable.dataset.id);
             layersElem.appendChild(dCanvas.layer);
-            sortPos[1] = 0;
+            this.dragInfo['toPos'] = 0;
+        } else if (draggable == null) {
+            const aCanvas = this.layers.get(afterElement.dataset.id);
+            layersElem.prepend(aCanvas.layer);
+            this.dragInfo['toPos'] = layerManager.layers.size;
         } else {
             const dCanvas = this.layers.get(draggable.dataset.id);
             const aCanvas = this.layers.get(afterElement.dataset.id);
             layersElem.insertBefore(dCanvas.layer, aCanvas.layer);
-            sortPos[0] = Number(dCanvas.layer.dataset.order);
-            sortPos[1] = Number(aCanvas.layer.dataset.order);
+            this.dragInfo['fromPos'] = Number(dCanvas.layer.dataset.order);
+            this.dragInfo['toPos'] = Number(aCanvas.layer.dataset.order);
         }
     }
 
@@ -192,8 +200,8 @@ class LayerManager {
 
                 elements[i].dataset.order = pos;
 
-
                 this.layers.get(elements[i].dataset.id).canvas.style.zIndex = pos;
+
                 await dbOperations.updateLayer(elements[i].dataset.id, {
                     order: pos
                 });
@@ -201,7 +209,6 @@ class LayerManager {
         } else {
             for (let i = elements.length - toOrder; i < elements.length - fromOrder + 1; i++) {
                 const order = Number(elements[i].dataset.order);
-                const canvas = this.layers.get(elements[i].dataset.id)?.canvas;
                 let pos;
 
                 if (order === fromOrder)
@@ -210,8 +217,9 @@ class LayerManager {
                     pos = order - 1;
 
                 elements[i].dataset.order = pos;
-                if (canvas)
-                    canvas.style.zIndex = pos;
+
+                this.layers.get(elements[i].dataset.id).canvas.style.zIndex = pos;
+
                 await dbOperations.updateLayer(elements[i].dataset.id, {
                     order: pos
                 });
@@ -395,6 +403,11 @@ class LayerManager {
             this.focusedLayerId = nextLayer.dataset.id;
         }
     }
+
+    getLayerByOrder(order) {
+        return layersElem.querySelector(`[data-order^='${order}']`);
+    }
+
 }
 
 const layerManager = new LayerManager();
