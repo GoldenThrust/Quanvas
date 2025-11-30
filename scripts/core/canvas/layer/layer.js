@@ -76,8 +76,9 @@ export default class Layer {
     }
 
     addData(path, data) {
-        data['path'] = path;
-        this.data.set(data.id, data);
+        const mData = { ...data };
+        mData['path'] = path;
+        this.data.set(data.id, mData);
     }
 
     clear() {

@@ -237,14 +237,13 @@ class LayerManager {
 
         layer.drawPath(path, state.fill, state.clip);
 
-        const id = await dbOperations.createPath(data);
         layer.addData(path, data);
 
+    
+        await dbOperations.createPath(data);
         history.updateHistory({
             type: 'save-drawing',
-            layerId: this.activeLayerId,
-            pathId: data['id'],
-            path
+            data
         })
     }
 

@@ -15,6 +15,7 @@ class HistoryManager {
         if (app.unloading) return;
         this.history.push(data);
         this.redoStack = [];
+        if (this.history.length > 100) this.history.shift();
     }
 
     async undo() {
@@ -84,7 +85,8 @@ class HistoryManager {
             }
 
             case 'save-drawing': {
-                const { layerId, pathId } = entry;
+                const { id: pathId, layerId } = entry.data;
+
                 try {
                     if (pathId) await dbOperations.deletePath(pathId);
                 } catch (e) { }
@@ -145,13 +147,15 @@ class HistoryManager {
             }
 
             case 'save-drawing': {
-                const { savedData, layerId } = entry;
-                if (savedData) {
+                const data  = entry.data;
+                if (data) {
                     try {
-                        const res = await dbOperations.createPath(savedData);
-                        const unser = Serializer.unserialize(savedData);
+                        await dbOperations.createPath(data);
+                        const unser = Serializer.unserialize(data);
                         canvas.flushToPath(unser);
-                    } catch (e) { }
+                    } catch (e) {
+                        console.error(e);
+                     }
                 }
                 break;
             }
