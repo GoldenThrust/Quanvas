@@ -106,6 +106,8 @@ class HistoryManager {
 
             case 'set-active-layer': {
                 const prev = entry.prevLayerId ?? null;
+                console.log('Undo set-active-layer to', prev);
+
                 if (prev) layerManager.setActiveLayer(prev, true);
                 break;
             }
@@ -162,7 +164,7 @@ class HistoryManager {
 
             case 'set-active-layer': {
                 const id = entry.layerId;
-                if (id) layerManager.setActiveLayer(id);
+                if (id) layerManager.setActiveLayer(id, true);
                 break;
             }
 

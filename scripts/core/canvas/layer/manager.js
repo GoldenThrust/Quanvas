@@ -289,7 +289,8 @@ class LayerManager {
         if (skipHistory) return;
         history.updateHistory({
             type: 'set-active-layer',
-            layerId: this.activeLayerId,
+            layerId: newLayer?.id ?? null,
+            prevLayerId: layer?.id ?? null
         })
     }
 
