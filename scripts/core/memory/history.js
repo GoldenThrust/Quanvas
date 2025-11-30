@@ -73,8 +73,8 @@ class HistoryManager {
 
                 layersElem.insertBefore(layerManager.getLayer(layerId).layer, element);
                 await layerManager.reOrder(layerManager.layers.size, order);
-
-                if (data && data.length) {
+                
+                if (data && data.size) {
                     for (const [_, p] of data) {
                         try { await dbOperations.createPath(p); } catch (e) { }
                         const unser = Serializer.unserialize(p);
@@ -106,7 +106,7 @@ class HistoryManager {
 
             case 'set-active-layer': {
                 const prev = entry.prevLayerId ?? null;
-                if (prev) layerManager.setActiveLayer(prev);
+                if (prev) layerManager.setActiveLayer(prev, true);
                 break;
             }
 

@@ -57,6 +57,54 @@ class LayerManager {
                 afterElemId: afterElement?.dataset?.id,
             });
         });
+
+
+        layersElem.addEventListener('click', e => {
+            if (e.target.classList.contains('layer-name')) return;
+            const layer = e.target.closest('.layer');
+            if (!layer) return;
+
+            this.setActiveLayer(layer.dataset.id);
+            this.focusedLayerId = layer.dataset.id;
+            layer.focus();
+        });
+
+        layersElem.addEventListener('focus', e => {
+            const layer = e.target.closest('.layer');
+            if (!layer) return;
+            this.focusedLayerId = layer.dataset.id;
+        });
+
+        layersElem.addEventListener('blur', e => {
+            const layer = e.target.closest('.layer');
+            if (!layer) return;
+            this.focusedLayerId = null;
+        });
+
+        layersElem.addEventListener('keydown', e => {
+            const layer = e.target.closest('.layer');
+            if (!layer) return;
+            switch (e.key) {
+                case 'Enter':
+                case ' ':
+                    e.preventDefault();
+                    this.setActiveLayer(layer.dataset.id);
+                    break;
+                case 'Delete':
+                    e.preventDefault();
+                    if (this.focusedLayerId === layer.dataset.id && !e.target.classList.contains('layer-name'))
+                        this.removeLayer();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.#focusAdjacentLayer(layer, -1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.#focusAdjacentLayer(layer, 1);
+                    break;
+            }
+        });
     }
 
     init() {
@@ -82,45 +130,6 @@ class LayerManager {
             const layer = new Layer(id, name, order, layerDivElem);
             this.layers.set(id, layer);
 
-            layerDivElem.addEventListener('click', e => {
-                if (e.target.classList.contains('layer-name')) return;
-                this.setActiveLayer(e.currentTarget.dataset.id);
-                this.focusedLayerId = e.currentTarget.dataset.id;
-                e.currentTarget.focus();
-            });
-
-            layerDivElem.addEventListener('focus', e => {
-                this.focusedLayerId = e.currentTarget.dataset.id;
-            });
-
-            layerDivElem.addEventListener('blur', e => {
-                if (!layersElem.contains(e.relatedTarget)) {
-                    this.focusedLayerId = null;
-                }
-            });
-
-            layerDivElem.addEventListener('keydown', e => {
-                switch (e.key) {
-                    case 'Enter':
-                    case ' ':
-                        e.preventDefault();
-                        this.setActiveLayer(e.currentTarget.dataset.id);
-                        break;
-                    case 'Delete':
-                        e.preventDefault();
-                        if (this.focusedLayerId === e.currentTarget.dataset.id && !e.target.classList.contains('layer-name'))
-                            this.removeLayer();
-                        break;
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        this.#focusAdjacentLayer(e.currentTarget, -1);
-                        break;
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        this.#focusAdjacentLayer(e.currentTarget, 1);
-                        break;
-                }
-            });
 
             const paths = await dbOperations.getPathsByLayer(id);
 
@@ -239,7 +248,7 @@ class LayerManager {
 
         layer.addData(path, data);
 
-    
+
         await dbOperations.createPath(data);
         history.updateHistory({
             type: 'save-drawing',
