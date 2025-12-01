@@ -81,7 +81,6 @@ export default class Canvas {
     }
 
     #flushDrawing(flush) {
-        console.log('flushing drawing');
         if (this.path === null) return;
 
         this.draw(this.previousPosition.x, this.previousPosition.y);

@@ -108,7 +108,6 @@ class HistoryManager {
 
             case 'set-active-layer': {
                 const prev = entry.prevLayerId ?? null;
-                console.log('Undo set-active-layer to', prev);
 
                 if (prev) layerManager.setActiveLayer(prev, true);
                 break;
@@ -116,7 +115,6 @@ class HistoryManager {
 
             case 'rename-layer': {
                 const { layerId, newName, oldName } = entry;
-                console.log('Undo rename-layer to', oldName, 'for', layerId, 'from', newName);
                 const layer = layerManager.getLayer(layerId);
                 if (layer) layer.setName(layerId, oldName);
                 break;
@@ -179,7 +177,6 @@ class HistoryManager {
             case 'rename-layer': {
                 const { layerId, newName, oldName } = entry;
                 const layer = layerManager.getLayer(layerId);
-                console.log('Redo rename-layer to', newName, 'for', layerId, 'from', oldName);
                 if (layer) layer.setName(layerId, newName);
                 break;
             }

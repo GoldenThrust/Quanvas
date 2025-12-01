@@ -185,7 +185,6 @@ const storeDefinitions = [
 
 try {
     await database.open(storeDefinitions);
-    console.log('Database initialized successfully');
 } catch (error) {
     console.error('Failed to initialize database:', error);
     throw error;

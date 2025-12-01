@@ -346,7 +346,6 @@ class LayerManager {
             layer.canvas.remove();
 
             this.layers.delete(id);
-            console.log('Removed layer:', id);
 
             this.focusedLayerId = null;
 

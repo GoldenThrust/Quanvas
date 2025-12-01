@@ -90,7 +90,6 @@ export default class Layer {
     }
 
     setName(id, name) {
-        console.log('Renaming layer', id, 'to', name);
         this.name = name;
         this.nameElem.innerText = this.name;
         dbOperations.updateLayer(id, {
