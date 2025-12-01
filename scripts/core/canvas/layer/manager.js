@@ -31,6 +31,8 @@ class LayerManager {
         });
 
         layersElem.addEventListener('dragstart', (e) => {
+            this.dragInfo['fromPos'] = 0;
+            this.dragInfo['toPos'] = 0;
             const layer = e.target.closest('.layer');
             if (!layer) return;
             layer.classList.add('dragging');
@@ -47,11 +49,6 @@ class LayerManager {
                     ...this.dragInfo
                 });
             }
-
-            console.log(this.dragInfo);
-
-            this.dragInfo['fromPos'] = 0;
-
         });
 
         layersElem.addEventListener("dragover", (e) => {

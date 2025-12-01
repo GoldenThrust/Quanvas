@@ -124,13 +124,12 @@ class HistoryManager {
                 let { fromPos, toPos } = entry;
                 fromPos = fromPos < toPos ? fromPos - 1 : fromPos;
                 toPos = fromPos < toPos ? toPos : toPos + 1;
-        
+
                 const fromElem = layerManager.getLayerByOrder(fromPos);
                 const toElem = layerManager.getLayerByOrder(toPos);
 
-                layerManager.changePosition(toElem, fromElem, false);
+                layerManager.changePosition(toElem, fromElem);
                 await layerManager.reOrder(toPos, fromPos);
-                layerManager.dragInfo['fromPos'] = 0;
                 break;
             }
 
@@ -184,9 +183,12 @@ class HistoryManager {
             }
 
             case 'change-layer-pos': {
-                const { dragElem, afterElem } = entry;
-                layerManager.changePosition(dragElem, afterElem);
-                const { fromPos, toPos } = layerManager.dragInfo;
+                let { fromPos, toPos } = entry;
+
+                const fromElem = layerManager.getLayerByOrder(fromPos);
+                const toElem = layerManager.getLayerByOrder(toPos);
+
+                layerManager.changePosition(fromElem, toElem);
                 await layerManager.reOrder(fromPos, toPos);
                 break;
             }
