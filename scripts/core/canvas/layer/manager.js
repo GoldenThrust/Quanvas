@@ -199,11 +199,15 @@ class LayerManager {
 
                 elements[i].dataset.order = pos;
 
-                this.layers.get(elements[i].dataset.id).canvas.style.zIndex = pos;
+                const canvas = this.layers.get(elements[i].dataset.id)?.canvas;
 
-                await dbOperations.updateLayer(elements[i].dataset.id, {
-                    order: pos
-                });
+                if (canvas) {
+                    canvas.style.zIndex = pos;
+
+                    await dbOperations.updateLayer(elements[i].dataset.id, {
+                        order: pos
+                    });
+                }
             }
         } else {
             for (let i = elements.length - toOrder; i < elements.length - fromOrder + 1; i++) {
@@ -217,11 +221,16 @@ class LayerManager {
 
                 elements[i].dataset.order = pos;
 
-                this.layers.get(elements[i].dataset.id).canvas.style.zIndex = pos;
 
-                await dbOperations.updateLayer(elements[i].dataset.id, {
-                    order: pos
-                });
+                const canvas = this.layers.get(elements[i].dataset.id)?.canvas;
+
+                if (canvas) {
+                    canvas.style.zIndex = pos;
+
+                    await dbOperations.updateLayer(elements[i].dataset.id, {
+                        order: pos
+                    });
+                }
             }
         }
     }
@@ -236,7 +245,6 @@ class LayerManager {
 
     async saveDrawing(path, points, state, type) {
         const layer = this.getActiveLayer();
-        console.log('Eraser', state.erase, layer.layerCanvas);
 
         if (layer == null) {
             console.warn('No active layer to save drawing');
@@ -265,7 +273,6 @@ class LayerManager {
 
     async saveDrawingIn(id, path, points, state, type) {
         const layer = this.getLayer(id);
-        console.log('Eraser build', state.erase, layer.layerCanvas);
 
         if (layer == null) {
             console.warn('No layer to save drawing');
@@ -339,6 +346,7 @@ class LayerManager {
             layer.canvas.remove();
 
             this.layers.delete(id);
+            console.log('Removed layer:', id);
 
             this.focusedLayerId = null;
 
