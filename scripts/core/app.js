@@ -1,5 +1,4 @@
 import { CANVAS_PROP, TOOL_IDS } from "../shared/constants.js";
-
 import Canvas, { canvas } from "./canvas/canvas.js";
 import layerManager from "./canvas/layer/manager.js";
 import Database, { dbOperations } from "./memory/database.js";

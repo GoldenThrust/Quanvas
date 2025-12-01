@@ -132,7 +132,9 @@ class LayerManager {
             this.layers.set(id, layer);
 
 
-            const paths = await dbOperations.getPathsByLayer(id);
+            const paths = (await dbOperations.getPathsByLayer(id)).sort((a, b) => {
+                return a.createdAt - b.createdAt;
+            });
 
             if (paths.length) {
                 for (const pathData of paths) {
@@ -232,8 +234,9 @@ class LayerManager {
         return this.getLayer(this.activeLayerId);
     }
 
-    async saveDrawing(path, points, state) {
+    async saveDrawing(path, points, state, type) {
         const layer = this.getActiveLayer();
+        console.log('Eraser', state.erase, layer.layerCanvas);
 
         if (layer == null) {
             console.warn('No active layer to save drawing');
@@ -243,14 +246,13 @@ class LayerManager {
         const data = Serializer.serialize({
             id: `path-${uuid()}`,
             points,
-            state: app.state,
-            type: toolsManager.activeToolId,
+            state,
+            type,
             layerId: layer.id,
             projectId: Database.getCurrentProjectID(),
         })
 
         layer.drawPath(path, state.fill, state.clip);
-
         layer.addData(path, data);
 
 
@@ -261,8 +263,9 @@ class LayerManager {
         })
     }
 
-    async saveDrawingIn(id, path, points, state) {
+    async saveDrawingIn(id, path, points, state, type) {
         const layer = this.getLayer(id);
+        console.log('Eraser build', state.erase, layer.layerCanvas);
 
         if (layer == null) {
             console.warn('No layer to save drawing');
@@ -272,13 +275,14 @@ class LayerManager {
         const data = Serializer.serialize({
             id,
             points,
-            state: app.state,
-            type: toolsManager.activeToolId,
+            state,
+            type,
             layerId: layer.id,
             projectId: Database.getCurrentProjectID(),
         })
 
-        layer.drawPath(path, state.fill, state.clip);
+
+        layer.drawPath(path, data.state.fill, data.state.clip);
         layer.addData(path, data);
     }
 

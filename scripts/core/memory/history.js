@@ -95,7 +95,9 @@ class HistoryManager {
                 if (layer) {
                     layer.clear();
                     layer.clearData();
-                    const paths = await dbOperations.getPathsByLayer(layerId);
+                    const paths = (await dbOperations.getPathsByLayer(layerId)).sort((a, b) => {
+                        return a.createdAt - b.createdAt;
+                    });
                     for (const p of paths) {
                         const unser = Serializer.unserialize(p);
                         canvas.flushToPath(unser);

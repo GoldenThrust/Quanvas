@@ -98,7 +98,7 @@ export default class Canvas {
         if (this.flush) {
             if (['R', 'C'].includes(this.activeTool[0])) this.points.push({ x: this.previousPosition.x, y: this.previousPosition.y });
 
-            layerManager.saveDrawing(this.path, this.points, this.state);
+            layerManager.saveDrawing(this.path, this.points, this.state, this.activeTool);
 
             this.reset()
         }
@@ -122,7 +122,7 @@ export default class Canvas {
             this.draw(points[i].x, points[i].y, state, type, layerManager.getLayer(layerId));
         }
 
-        layerManager.saveDrawingIn(layerId, this.path, points, state);
+        layerManager.saveDrawingIn(layerId, this.path, points, state, type);
         this.reset();
     }
 
@@ -248,10 +248,6 @@ export default class Canvas {
                     break;
             }
 
-            // this.ctx.fillStyle = 'red';
-            // this.ctx.strokeStyle = 'yellow';
-
-
 
             if (this.state.fill && !drawGPath) {
                 this.ctx.fill(this.path);
@@ -329,7 +325,6 @@ export default class Canvas {
         this.createPath()
         const radiusX = Math.abs(x - this.initialPosition.x);
         const radiusY = Math.abs(y - this.initialPosition.y);
-        // const rotation = Math.atan2(y - this.initialPosition.y, x - this.initialPosition.x);
         this.path?.ellipse?.(this.initialPosition.x, this.initialPosition.y, radiusX, radiusY, 0, 0, Math.PI * 2);
         if (!this.points.length) this.points.push({ x: this.initialPosition.x, y: this.initialPosition.y });
     }
@@ -341,7 +336,6 @@ export default class Canvas {
             this.path?.lineTo?.(x, y);
         })
         this.ctx.lineTo(x, y);
-        // this.path.lineTo(x, y);
     }
 
     #arcTo(x, y) {
